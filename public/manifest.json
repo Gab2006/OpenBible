@@ -1,6 +1,6 @@
 {
-  "name": "Bible Verse Reader",
-  "short_name": "Bible",
+  "name": "OpenBible",
+  "short_name": "OpenBible",
   "description": "Lettore biblico PWA offline",
   "theme_color": "#FAF6EF",
   "background_color": "#FAF6EF",

@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
-        name: 'Bible Verse Reader',
-        short_name: 'Bible',
+        name: 'OpenBible',
+        short_name: 'OpenBible',
         description: 'Lettore biblico PWA',
         theme_color: '#FAF6EF',
         background_color: '#FAF6EF',
