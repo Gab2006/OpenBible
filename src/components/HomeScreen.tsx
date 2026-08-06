@@ -295,7 +295,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               {/* Drag handle */}
               <motion.div 
                 className="flex justify-center pt-3 pb-3 cursor-grab active:cursor-grabbing touch-none"
-                onPanEnd={(event, info) => {
+                onPanEnd={(_event, info) => {
                   if (info.offset.y < -30) {
                     setIsFullscreen(true);
                   } else if (info.offset.y > 30) {
