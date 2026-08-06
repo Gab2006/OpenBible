@@ -77,6 +77,7 @@ export async function saveVerse(verse: Verse) {
     timestamp: Date.now(),
   };
   await db.put('saved_verses', savedVerse);
+  window.dispatchEvent(new Event('verses-changed'));
 }
 
 export async function removeSavedVerse(bookId: string, chapter: number, verse: number) {
@@ -84,6 +85,7 @@ export async function removeSavedVerse(bookId: string, chapter: number, verse: n
   const id = `${bookId}-${chapter}-${verse}`;
   // @ts-ignore - id is keyPath
   await db.delete('saved_verses', id);
+  window.dispatchEvent(new Event('verses-changed'));
 }
 
 export async function isVerseSaved(bookId: string, chapter: number, verse: number): Promise<boolean> {

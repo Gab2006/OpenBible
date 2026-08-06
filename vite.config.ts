@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
+      includeAssets: ['favicon.png', 'icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
         name: 'Bible Verse Reader',
         short_name: 'Bible',

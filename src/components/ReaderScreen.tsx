@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Bookmark } from 'lucide-react';
 import { isVerseSaved, saveVerse, removeSavedVerse } from '../services/storage';
 import type { Verse } from '../services/storage';
 import { SaveButton } from './SaveButton';
@@ -20,7 +20,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   initialBookId,
   initialChapter,
   initialVerse,
-  onHome,
+  onHome: _onHome,
   onPositionChange,
 }) => {
   const [currentBookId, setCurrentBookId] = useState(initialBookId);
@@ -29,7 +29,9 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   const [verses, setVerses] = useState<Verse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [direction, setDirection] = useState(0); // 1 = right (next), -1 = left (prev)
+  const [direction, setDirection] = useState(0);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [hasSwipedOnce, setHasSwipedOnce] = useState(false);
 
   // Keep local state in sync with initial props when they change externally (e.g. hash routing)
   useEffect(() => {
@@ -63,6 +65,8 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   const currentVerse = verses.find(v => v.verse === currentVerseNum);
   const bookMeta = books.find(b => b.id === currentBookId);
 
+  const progress = verses.length > 0 ? currentVerseNum / verses.length : 0;
+
   const toggleSave = async () => {
     if (!currentVerse) return;
     if (isSaved) {
@@ -71,11 +75,15 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
     } else {
       await saveVerse(currentVerse);
       setIsSaved(true);
+      // Feedback visivo al salvataggio
+      setShowSaveConfirm(true);
+      setTimeout(() => setShowSaveConfirm(false), 1200);
     }
   };
 
   const navigateTo = (dir: 1 | -1) => {
     if (!bookMeta) return;
+    setHasSwipedOnce(true);
 
     if (dir === 1) { // Next
       const isLastVerse = currentVerseNum === verses.length;
@@ -160,51 +168,114 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   };
 
   return (
-    <div className="relative h-full w-full bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text overflow-hidden reader-container flex flex-col justify-center items-center">
-      {/* Top bar with back button */}
-      <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10 pt-[max(1rem,env(safe-area-inset-top))]">
-        <button onClick={onHome} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-          <Home className="w-6 h-6" />
-        </button>
-      </div>
-      
-      {/* Save Button */}
-      <SaveButton isSaved={isSaved} onToggle={toggleSave} />
-
-      <AnimatePresence initial={false} custom={direction} mode="wait">
+    <div className="relative h-full w-full bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text overflow-hidden reader-container flex flex-col">
+      {/* Progress bar */}
+      <div className="absolute top-0 left-0 right-0 z-20 h-[3px] bg-black/5 dark:bg-white/5">
         <motion.div
-          key={`${currentBookId}-${currentChapter}-${currentVerseNum}`}
-          custom={direction}
-          variants={variants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{
-            x: { type: "spring", stiffness: 300, damping: 30 },
-            opacity: { duration: 0.2 },
-          }}
-          drag
-          dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-          dragElastic={0.2}
-          onDragEnd={handleDragEnd}
-          className="absolute inset-0 flex flex-col items-center justify-center p-8 cursor-grab active:cursor-grabbing"
-        >
-          {isLoading && verses.length === 0 ? (
-            <div className="opacity-50 text-sm">Caricamento...</div>
-          ) : currentVerse ? (
-            <>
-              <p className="font-serif text-[clamp(24px,6vw,40px)] text-center leading-relaxed max-w-2xl select-none">
-                {currentVerse.text}
-              </p>
-              <div className="mt-8 text-sm font-sans tracking-widest uppercase opacity-60 text-accent font-medium">
-                {currentVerse.bookName} {currentVerse.chapter}:{currentVerse.verse}
-              </div>
-            </>
-          ) : (
-            <div className="opacity-50 text-sm">Verso non trovato.</div>
-          )}
-        </motion.div>
+          className="h-full bg-accent rounded-r-full"
+          initial={false}
+          animate={{ width: `${progress * 100}%` }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+        />
+      </div>
+
+      {/* Header informativo */}
+      <div className="relative z-10 flex items-center justify-between px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
+        <div className="text-xs font-sans tracking-widest uppercase text-light-text/40 dark:text-dark-text/40">
+          {bookMeta?.name} · Capitolo {currentChapter}
+        </div>
+        <div className="text-xs font-sans text-light-text/30 dark:text-dark-text/30">
+          {currentVerseNum}/{verses.length || '…'}
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="absolute right-3 top-10 z-20">
+        <SaveButton isSaved={isSaved} onToggle={toggleSave} />
+      </div>
+
+      {/* Feedback salvataggio */}
+      <AnimatePresence>
+        {showSaveConfirm && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ duration: 0.3 }}
+            className="fixed left-0 right-0 bottom-[calc(1.5rem+3.5rem+2rem)] z-[60] flex justify-center pointer-events-none"
+          >
+            <div className="bg-accent/90 text-white rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
+              <Bookmark className="w-6 h-6" fill="white" />
+              <span className="font-sans font-medium text-sm">Salvato!</span>
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
+
+      {/* Contenuto verso — area principale */}
+      <div className="flex-1 relative flex items-center justify-center">
+        {/* Indicatori swipe laterali (scompaiono dopo il primo swipe) */}
+        {!hasSwipedOnce && !isLoading && verses.length > 0 && (
+          <>
+            <motion.div
+              animate={{ opacity: [0.15, 0.4, 0.15] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="absolute left-3 z-10 p-2 rounded-full bg-black/5 dark:bg-white/5"
+            >
+              <ChevronLeft className="w-5 h-5 opacity-50" />
+            </motion.div>
+            <motion.div
+              animate={{ opacity: [0.15, 0.4, 0.15] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="absolute right-3 z-10 p-2 rounded-full bg-black/5 dark:bg-white/5"
+            >
+              <ChevronRight className="w-5 h-5 opacity-50" />
+            </motion.div>
+          </>
+        )}
+
+        <AnimatePresence initial={false} custom={direction} mode="wait">
+          <motion.div
+            key={`${currentBookId}-${currentChapter}-${currentVerseNum}`}
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: "spring", stiffness: 300, damping: 30 },
+              opacity: { duration: 0.2 },
+            }}
+            drag
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            dragElastic={0.2}
+            onDragEnd={handleDragEnd}
+            className="absolute inset-0 flex flex-col items-center justify-center p-8 cursor-grab active:cursor-grabbing"
+          >
+            {isLoading && verses.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center gap-3"
+              >
+                <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+                <span className="text-sm opacity-40 font-sans">Caricamento…</span>
+              </motion.div>
+            ) : currentVerse ? (
+              <>
+                <p className="font-serif text-[clamp(22px,5.5vw,38px)] text-center leading-relaxed max-w-2xl select-none">
+                  {currentVerse.text}
+                </p>
+                <div className="mt-8 text-sm font-sans tracking-widest uppercase opacity-50 text-accent font-medium">
+                  {currentVerse.bookName} {currentVerse.chapter}:{currentVerse.verse}
+                </div>
+              </>
+            ) : (
+              <div className="opacity-50 text-sm font-sans">Verso non trovato.</div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

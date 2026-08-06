@@ -12,7 +12,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({ isSaved, onToggle }) => 
     <motion.button
       whileTap={{ scale: 0.9 }}
       onClick={onToggle}
-      className="absolute top-0 right-0 p-4 z-10 pt-[max(1rem,env(safe-area-inset-top))] hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors"
+      className="p-3 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors"
       aria-label={isSaved ? "Rimuovi dai salvati" : "Salva verso"}
     >
       <motion.div

@@ -1,20 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { HomeScreen } from './components/HomeScreen';
 import { ReaderScreen } from './components/ReaderScreen';
 import { SavedVersesScreen } from './components/SavedVersesScreen';
-import { getReadingPosition, saveReadingPosition, getAllSavedVerses } from './services/storage';
+import { SettingsScreen } from './components/SettingsScreen';
+import { BottomNav } from './components/BottomNav';
+import { getReadingPosition, saveReadingPosition, getAllSavedVerses, initDB } from './services/storage';
 import type { ReadingPosition } from './services/storage';
+import { fetchChapter } from './services/bibleApi';
 import { books } from './data/books';
 
 type ViewState = 
   | { type: 'home' }
   | { type: 'reader', bookId: string, chapter: number, verse: number }
-  | { type: 'saved' };
+  | { type: 'saved' }
+  | { type: 'settings' };
 
 export default function App() {
   const [view, setView] = useState<ViewState>({ type: 'home' });
   const [readingPosition, setReadingPosition] = useState<ReadingPosition | undefined>(undefined);
   const [savedCount, setSavedCount] = useState(0);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     if (saved) return saved === 'dark';
@@ -32,15 +38,21 @@ export default function App() {
           const chapter = parseInt(parts[3], 10);
           const verse = parseInt(parts[4], 10);
           if (bookId && !isNaN(chapter) && !isNaN(verse)) {
-            setView({ type: 'reader', bookId, chapter, verse });
+            setView(prev => {
+              if (prev.type === 'reader' && prev.bookId === bookId && prev.chapter === chapter && prev.verse === verse) return prev;
+              return { type: 'reader', bookId, chapter, verse };
+            });
             return;
           }
         }
       } else if (hash === '#/saved') {
-        setView({ type: 'saved' });
+        setView(prev => prev.type === 'saved' ? prev : { type: 'saved' });
+        return;
+      } else if (hash === '#/settings') {
+        setView(prev => prev.type === 'settings' ? prev : { type: 'settings' });
         return;
       }
-      setView({ type: 'home' });
+      setView(prev => prev.type === 'home' ? prev : { type: 'home' });
     };
 
     handleHashChange();
@@ -55,6 +67,8 @@ export default function App() {
       window.location.hash = '/';
     } else if (view.type === 'saved' && hash !== '#/saved') {
       window.location.hash = '/saved';
+    } else if (view.type === 'settings' && hash !== '#/settings') {
+      window.location.hash = '/settings';
     } else if (view.type === 'reader') {
       const expectedHash = `#/reader/${view.bookId}/${view.chapter}/${view.verse}`;
       if (hash !== expectedHash) {
@@ -64,9 +78,49 @@ export default function App() {
   }, [view]);
 
   useEffect(() => {
-    getReadingPosition().then(setReadingPosition);
-    getAllSavedVerses().then(verses => setSavedCount(verses.length));
-  }, [view]);
+    const initializeApp = async () => {
+      try {
+        await initDB();
+        const pos = await getReadingPosition();
+        if (pos) {
+          setReadingPosition(pos);
+          await fetchChapter(pos.bookId, pos.chapter);
+        } else {
+          await fetchChapter('GEN', 1);
+        }
+      } catch (error) {
+        console.error("Initialization error:", error);
+      } finally {
+        const preloader = document.getElementById('global-preloader');
+        if (preloader) {
+          preloader.classList.add('hidden');
+          setTimeout(() => {
+            preloader.remove();
+            document.body.style.overflow = '';
+          }, 400);
+        }
+        setIsInitializing(false);
+      }
+    };
+
+    initializeApp();
+  }, []);
+
+  useEffect(() => {
+    if (!isInitializing) {
+      getReadingPosition().then(setReadingPosition);
+    }
+  }, [view, isInitializing]);
+
+  useEffect(() => {
+    const updateSavedCount = () => {
+      getAllSavedVerses().then(verses => setSavedCount(verses.length));
+    };
+    
+    updateSavedCount();
+    window.addEventListener('verses-changed', updateSavedCount);
+    return () => window.removeEventListener('verses-changed', updateSavedCount);
+  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -78,12 +132,17 @@ export default function App() {
     }
   }, [isDarkMode]);
 
-  const handlePositionChange = (bookId: string, chapter: number, verse: number) => {
+  const handlePositionChange = useCallback((bookId: string, chapter: number, verse: number) => {
     saveReadingPosition({ bookId, chapter, verse });
     setReadingPosition({ bookId, chapter, verse });
     // Update view state to keep it in sync with the current verse read
-    setView({ type: 'reader', bookId, chapter, verse });
-  };
+    setView(prev => {
+      if (prev.type === 'reader' && prev.bookId === bookId && prev.chapter === chapter && prev.verse === verse) {
+        return prev;
+      }
+      return { type: 'reader', bookId, chapter, verse };
+    });
+  }, []);
 
   const handleRandomVerse = () => {
     const randomBook = books[Math.floor(Math.random() * books.length)];
@@ -91,43 +150,96 @@ export default function App() {
     setView({ type: 'reader', bookId: randomBook.id, chapter: randomChapter, verse: 1 });
   };
 
+  if (isInitializing) {
+    return null;
+  }
+
   return (
     <>
-      {view.type === 'home' && (
-        <HomeScreen 
-          readingPosition={readingPosition}
-          savedVersesCount={savedCount}
-          onContinue={() => {
-            if (readingPosition) {
-              setView({ type: 'reader', ...readingPosition });
-            } else {
-              setView({ type: 'reader', bookId: 'GEN', chapter: 1, verse: 1 });
-            }
-          }}
-          onRandomVerse={handleRandomVerse}
-          onOpenSaved={() => setView({ type: 'saved' })}
-          onSelectChapter={(bookId, chapter) => setView({ type: 'reader', bookId, chapter, verse: 1 })}
-          isDarkMode={isDarkMode}
-          onToggleTheme={() => setIsDarkMode(!isDarkMode)}
-        />
-      )}
-      
-      {view.type === 'reader' && (
-        <ReaderScreen 
-          initialBookId={view.bookId}
-          initialChapter={view.chapter}
-          initialVerse={view.verse}
-          onHome={() => setView({ type: 'home' })}
-          onPositionChange={handlePositionChange}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {view.type === 'home' && (
+          <motion.div 
+            key="home"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="h-full w-full"
+          >
+            <HomeScreen 
+              readingPosition={readingPosition}
+              onContinue={() => {
+                if (readingPosition) {
+                  setView({ type: 'reader', ...readingPosition });
+                } else {
+                  setView({ type: 'reader', bookId: 'GEN', chapter: 1, verse: 1 });
+                }
+              }}
+              onSelectChapter={(bookId, chapter) => setView({ type: 'reader', bookId, chapter, verse: 1 })}
+            />
+          </motion.div>
+        )}
+        
+        {view.type === 'reader' && (
+          <motion.div 
+            key="reader"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="h-full w-full"
+          >
+            <ReaderScreen 
+              initialBookId={view.bookId}
+              initialChapter={view.chapter}
+              initialVerse={view.verse}
+              onHome={() => setView({ type: 'home' })}
+              onPositionChange={handlePositionChange}
+            />
+          </motion.div>
+        )}
 
-      {view.type === 'saved' && (
-        <SavedVersesScreen 
-          onBack={() => setView({ type: 'home' })}
-          onSelectVerse={(bookId, chapter, verse) => setView({ type: 'reader', bookId, chapter, verse })}
-        />
-      )}
+        {view.type === 'saved' && (
+          <motion.div 
+            key="saved"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="h-full w-full"
+          >
+            <SavedVersesScreen 
+              onBack={() => setView({ type: 'home' })}
+              onSelectVerse={(bookId, chapter, verse) => setView({ type: 'reader', bookId, chapter, verse })}
+            />
+          </motion.div>
+        )}
+
+        {view.type === 'settings' && (
+          <motion.div 
+            key="settings"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="h-full w-full"
+          >
+            <SettingsScreen 
+              isDarkMode={isDarkMode}
+              onToggleTheme={setIsDarkMode}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      <BottomNav
+        currentView={view.type}
+        onNavigateHome={() => setView({ type: 'home' })}
+        onShuffle={handleRandomVerse}
+        onNavigateSaved={() => setView({ type: 'saved' })}
+        onNavigateSettings={() => setView({ type: 'settings' })}
+        savedVersesCount={savedCount}
+      />
     </>
   );
 }
