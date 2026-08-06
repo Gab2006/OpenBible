@@ -21,10 +21,52 @@ export default function App() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
+  // Hash-based routing
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/reader/')) {
+        const parts = hash.split('/');
+        if (parts.length >= 5) {
+          const bookId = parts[2];
+          const chapter = parseInt(parts[3], 10);
+          const verse = parseInt(parts[4], 10);
+          if (bookId && !isNaN(chapter) && !isNaN(verse)) {
+            setView({ type: 'reader', bookId, chapter, verse });
+            return;
+          }
+        }
+      } else if (hash === '#/saved') {
+        setView({ type: 'saved' });
+        return;
+      }
+      setView({ type: 'home' });
+    };
+
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Update hash when view changes (unless it's already in sync)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (view.type === 'home' && hash !== '#/' && hash !== '') {
+      window.location.hash = '/';
+    } else if (view.type === 'saved' && hash !== '#/saved') {
+      window.location.hash = '/saved';
+    } else if (view.type === 'reader') {
+      const expectedHash = `#/reader/${view.bookId}/${view.chapter}/${view.verse}`;
+      if (hash !== expectedHash) {
+        window.location.hash = `/reader/${view.bookId}/${view.chapter}/${view.verse}`;
+      }
+    }
+  }, [view]);
+
   useEffect(() => {
     getReadingPosition().then(setReadingPosition);
     getAllSavedVerses().then(verses => setSavedCount(verses.length));
-  }, [view]); // Refresh when view changes
+  }, [view]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -39,15 +81,13 @@ export default function App() {
   const handlePositionChange = (bookId: string, chapter: number, verse: number) => {
     saveReadingPosition({ bookId, chapter, verse });
     setReadingPosition({ bookId, chapter, verse });
+    // Update view state to keep it in sync with the current verse read
+    setView({ type: 'reader', bookId, chapter, verse });
   };
 
   const handleRandomVerse = () => {
     const randomBook = books[Math.floor(Math.random() * books.length)];
     const randomChapter = Math.floor(Math.random() * randomBook.chapters) + 1;
-    // We don't know the exact verse count, so we guess 1 or something small, or fetch it first.
-    // For now, let's just go to verse 1 of a random chapter.
-    // To make it truly random verse, we'd need chapter verses count, which we don't have without fetching.
-    // Let's just pick verse 1 to be safe and responsive.
     setView({ type: 'reader', bookId: randomBook.id, chapter: randomChapter, verse: 1 });
   };
 

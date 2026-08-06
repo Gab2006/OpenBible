@@ -19,7 +19,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
-        serif: ['Lora', 'serif'],
+        serif: ['Crimson Pro', 'serif'],
       },
     },
   },

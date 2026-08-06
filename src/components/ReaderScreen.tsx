@@ -31,6 +31,13 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [direction, setDirection] = useState(0); // 1 = right (next), -1 = left (prev)
 
+  // Keep local state in sync with initial props when they change externally (e.g. hash routing)
+  useEffect(() => {
+    setCurrentBookId(initialBookId);
+    setCurrentChapter(initialChapter);
+    setCurrentVerseNum(initialVerse);
+  }, [initialBookId, initialChapter, initialVerse]);
+
   // Load chapter verses
   useEffect(() => {
     let active = true;
