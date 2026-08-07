@@ -12,7 +12,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 }) => {
   return (
     <div className="h-full bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text overflow-y-auto">
-      <div className="p-6 md:p-12 pb-28">
+      <div className="p-6 md:p-12 pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <header className="mb-6 pt-[max(0.5rem,env(safe-area-inset-top))]">
           <h1 className="font-serif text-2xl md:text-3xl font-medium mb-1">Impostazioni</h1>
         </header>

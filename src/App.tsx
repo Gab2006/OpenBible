@@ -12,7 +12,7 @@ import { books } from './data/books';
 
 type ViewState = 
   | { type: 'home' }
-  | { type: 'reader', bookId: string, chapter: number, verse: number }
+  | { type: 'reader', bookId: string, chapter: number, verse: number, source: 'reading' | 'saved' | 'random' }
   | { type: 'saved' }
   | { type: 'settings' };
 
@@ -40,7 +40,7 @@ export default function App() {
           if (bookId && !isNaN(chapter) && !isNaN(verse)) {
             setView(prev => {
               if (prev.type === 'reader' && prev.bookId === bookId && prev.chapter === chapter && prev.verse === verse) return prev;
-              return { type: 'reader', bookId, chapter, verse };
+              return { type: 'reader', bookId, chapter, verse, source: prev.type === 'reader' ? prev.source : 'reading' };
             });
             return;
           }
@@ -135,19 +135,19 @@ export default function App() {
   const handlePositionChange = useCallback((bookId: string, chapter: number, verse: number) => {
     saveReadingPosition({ bookId, chapter, verse });
     setReadingPosition({ bookId, chapter, verse });
-    // Update view state to keep it in sync with the current verse read
+    // Mantieni il view state sincronizzato con il verso letto
     setView(prev => {
       if (prev.type === 'reader' && prev.bookId === bookId && prev.chapter === chapter && prev.verse === verse) {
         return prev;
       }
-      return { type: 'reader', bookId, chapter, verse };
+      return { type: 'reader', bookId, chapter, verse, source: prev.type === 'reader' ? prev.source : 'reading' };
     });
   }, []);
 
   const handleRandomVerse = () => {
     const randomBook = books[Math.floor(Math.random() * books.length)];
     const randomChapter = Math.floor(Math.random() * randomBook.chapters) + 1;
-    setView({ type: 'reader', bookId: randomBook.id, chapter: randomChapter, verse: 1 });
+    setView({ type: 'reader', bookId: randomBook.id, chapter: randomChapter, verse: 1, source: 'random' });
   };
 
   if (isInitializing) {
@@ -170,12 +170,12 @@ export default function App() {
               readingPosition={readingPosition}
               onContinue={() => {
                 if (readingPosition) {
-                  setView({ type: 'reader', ...readingPosition });
+                  setView({ type: 'reader', ...readingPosition, source: 'reading' });
                 } else {
-                  setView({ type: 'reader', bookId: 'GEN', chapter: 1, verse: 1 });
+                  setView({ type: 'reader', bookId: 'GEN', chapter: 1, verse: 1, source: 'reading' });
                 }
               }}
-              onSelectChapter={(bookId, chapter) => setView({ type: 'reader', bookId, chapter, verse: 1 })}
+              onSelectChapter={(bookId, chapter) => setView({ type: 'reader', bookId, chapter, verse: 1, source: 'reading' })}
             />
           </motion.div>
         )}
@@ -193,6 +193,7 @@ export default function App() {
               initialBookId={view.bookId}
               initialChapter={view.chapter}
               initialVerse={view.verse}
+              source={view.source}
               onHome={() => setView({ type: 'home' })}
               onPositionChange={handlePositionChange}
             />
@@ -210,7 +211,7 @@ export default function App() {
           >
             <SavedVersesScreen 
               onBack={() => setView({ type: 'home' })}
-              onSelectVerse={(bookId, chapter, verse) => setView({ type: 'reader', bookId, chapter, verse })}
+              onSelectVerse={(bookId, chapter, verse) => setView({ type: 'reader', bookId, chapter, verse, source: 'saved' })}
             />
           </motion.div>
         )}

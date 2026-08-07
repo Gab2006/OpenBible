@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Bookmark } from 'lucide-react';
-import { isVerseSaved, saveVerse, removeSavedVerse } from '../services/storage';
+import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import { isVerseSaved, saveVerse, removeSavedVerse, markChapterCompleted } from '../services/storage';
 import type { Verse } from '../services/storage';
 import { SaveButton } from './SaveButton';
 import { books } from '../data/books';
@@ -12,6 +12,7 @@ interface ReaderScreenProps {
   initialBookId: string;
   initialChapter: number;
   initialVerse: number;
+  source: 'reading' | 'saved' | 'random';
   onHome: () => void;
   onPositionChange: (bookId: string, chapter: number, verse: number) => void;
 }
@@ -20,6 +21,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   initialBookId,
   initialChapter,
   initialVerse,
+  source,
   onHome: _onHome,
   onPositionChange,
 }) => {
@@ -55,12 +57,13 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
     return () => { active = false; };
   }, [currentBookId, currentChapter]);
 
-  // Check if current verse is saved
+  // Check if current verse is saved + persist position only in reading mode
   useEffect(() => {
     isVerseSaved(currentBookId, currentChapter, currentVerseNum).then(setIsSaved);
-    // Report position change to parent to persist it
-    onPositionChange(currentBookId, currentChapter, currentVerseNum);
-  }, [currentBookId, currentChapter, currentVerseNum, onPositionChange]);
+    if (source === 'reading') {
+      onPositionChange(currentBookId, currentChapter, currentVerseNum);
+    }
+  }, [currentBookId, currentChapter, currentVerseNum, onPositionChange, source]);
 
   const currentVerse = verses.find(v => v.verse === currentVerseNum);
   const bookMeta = books.find(b => b.id === currentBookId);
@@ -91,6 +94,8 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
         setDirection(1);
         setCurrentVerseNum(currentVerseNum + 1);
       } else if (isLastVerse) {
+        // Capitolo completato: segna il progresso
+        markChapterCompleted(currentBookId, currentChapter);
         const isLastChapter = currentChapter === bookMeta.chapters;
         if (!isLastChapter) {
           setDirection(1);
@@ -145,8 +150,6 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
       navigateTo(1); // Swipe left -> Next
     } else if (info.offset.x > swipeThreshold) {
       navigateTo(-1); // Swipe right -> Prev
-    } else if (info.offset.y > swipeThreshold) {
-      toggleSave(); // Swipe down -> Save
     }
   };
 
@@ -154,6 +157,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
     enter: (direction: number) => ({
       x: direction > 0 ? window.innerWidth : -window.innerWidth,
       opacity: 0,
+      zIndex: 1,
     }),
     center: {
       zIndex: 1,
@@ -205,7 +209,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
             className="fixed left-0 right-0 bottom-[calc(1.5rem+3.5rem+2rem)] z-[60] flex justify-center pointer-events-none"
           >
             <div className="bg-accent/90 text-white rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
-              <Bookmark className="w-6 h-6" fill="white" />
+              <Heart className="w-6 h-6" fill="white" />
               <span className="font-sans font-medium text-sm">Salvato!</span>
             </div>
           </motion.div>
@@ -234,7 +238,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
           </>
         )}
 
-        <AnimatePresence initial={false} custom={direction} mode="wait">
+        <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={`${currentBookId}-${currentChapter}-${currentVerseNum}`}
             custom={direction}
@@ -250,6 +254,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
             dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
             dragElastic={0.2}
             onDragEnd={handleDragEnd}
+            onDoubleClick={toggleSave}
             className="absolute inset-0 flex flex-col items-center justify-center p-8 cursor-grab active:cursor-grabbing"
           >
             {isLoading && verses.length === 0 ? (

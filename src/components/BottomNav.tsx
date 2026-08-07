@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Shuffle, Bookmark, Settings } from 'lucide-react';
+import { Home, Shuffle, Heart, Settings } from 'lucide-react';
 
 interface BottomNavProps {
   currentView: 'home' | 'reader' | 'saved' | 'settings';
@@ -19,7 +19,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   savedVersesCount
 }) => {
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/70 dark:bg-black/70 backdrop-blur-xl backdrop-saturate-150 rounded-full px-6 py-3 flex gap-8 items-center shadow-lg border border-black/5 dark:border-white/10 z-50">
+    <div className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 bg-white/20 dark:bg-[#1A1917]/30 bg-gradient-to-b from-white/40 to-white/10 dark:from-white/5 dark:to-transparent backdrop-blur-lg backdrop-saturate-150 rounded-full px-6 py-3 flex gap-8 items-center shadow-[0_4px_20px_rgba(0,0,0,0.05),inset_0_1px_1px_rgba(255,255,255,0.4)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.1)] border border-white/30 dark:border-white/10 z-50">
       <button 
         onClick={onNavigateHome}
         aria-label="Home"
@@ -39,7 +39,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         aria-label="Versi Salvati"
         className={`p-2 transition-colors relative ${currentView === 'saved' ? 'text-accent' : 'text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text'}`}
       >
-        <Bookmark className="w-6 h-6" />
+        <Heart className="w-6 h-6" />
         {savedVersesCount > 0 && (
           <span className="absolute top-0 right-0 w-4 h-4 bg-accent text-white rounded-full text-[10px] flex items-center justify-center font-medium">
             {savedVersesCount}

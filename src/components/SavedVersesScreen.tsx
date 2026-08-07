@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { Trash2, BookOpen, Bookmark } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { Trash2, BookOpen, Heart } from 'lucide-react';
 import { getAllSavedVerses, removeSavedVerse } from '../services/storage';
 import type { SavedVerse } from '../services/storage';
 
@@ -16,52 +16,89 @@ const SavedVerseCard: React.FC<{
   onRemove: () => void;
 }> = ({ verse, onSelect, onRemove }) => {
   const x = useMotionValue(0);
-  const deleteOpacity = useTransform(x, [-120, -60], [1, 0]);
-  const deleteScale = useTransform(x, [-120, -60], [1, 0.8]);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const handleDragEnd = () => {
-    if (x.get() < -80) {
-      onRemove();
+  const handleDragEnd = (event: any, info: any) => {
+    const offset = info.offset.x;
+    
+    if (isOpen) {
+      if (offset < -20) {
+        // Second swipe left -> remove
+        onRemove();
+      } else if (offset > 20) {
+        // Swiped right -> close
+        setIsOpen(false);
+        animate(x, 0, { type: 'spring', stiffness: 300, damping: 20 });
+      } else {
+        // Snap back to open
+        animate(x, -100, { type: 'spring', stiffness: 300, damping: 20 });
+      }
+    } else {
+      if (offset < -40) {
+        // First swipe left -> open
+        setIsOpen(true);
+        animate(x, -100, { type: 'spring', stiffness: 300, damping: 20 });
+      } else {
+        // Snap back to close
+        animate(x, 0, { type: 'spring', stiffness: 300, damping: 20 });
+      }
     }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isOpen) {
+      e.stopPropagation();
+      setIsOpen(false);
+      animate(x, 0, { type: 'spring', stiffness: 300, damping: 20 });
+      return;
+    }
+    onSelect();
   };
 
   return (
     <div className="relative overflow-hidden rounded-2xl">
       {/* Layer rosso dietro la card (visibile con lo swipe) */}
-      <motion.div
-        style={{ opacity: deleteOpacity, scale: deleteScale }}
-        className="absolute inset-0 bg-red-500/10 dark:bg-red-500/20 rounded-2xl flex items-center justify-end pr-6"
+      <div
+        className="absolute inset-0 bg-red-500/10 dark:bg-red-500/20 rounded-2xl flex items-center justify-end pr-6 cursor-pointer"
+        onClick={onRemove}
       >
         <div className="flex flex-col items-center gap-1 text-red-500">
           <Trash2 className="w-6 h-6" />
           <span className="text-xs font-medium">Elimina</span>
         </div>
-      </motion.div>
+      </div>
 
       {/* Card principale swipabile */}
       <motion.div
         style={{ x }}
         drag="x"
-        dragConstraints={{ left: -120, right: 0 }}
+        dragConstraints={isOpen ? { left: -200, right: 0 } : { left: -100, right: 0 }}
         dragElastic={0.1}
         onDragEnd={handleDragEnd}
-        onClick={onSelect}
-        className="relative p-5 bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl border-l-4 border-accent/60 cursor-pointer active:bg-black/[0.06] dark:active:bg-white/[0.07] transition-colors"
+        onClick={handleClick}
+        className="group relative rounded-2xl border-l-4 border-accent/60 cursor-pointer overflow-hidden"
       >
-        <p className="font-serif text-base md:text-lg leading-relaxed mb-3">
-          {verse.text}
-        </p>
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-sans tracking-widest uppercase text-accent/70 font-medium">
-            {verse.bookName} {verse.chapter}:{verse.verse}
-          </span>
-          <button
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            className="p-2 text-red-400/60 hover:text-red-500 active:text-red-600 transition-colors rounded-full hover:bg-red-500/10"
-            aria-label="Rimuovi"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+        {/* Layer solido per bloccare la visibilità del cestino sottostante */}
+        <div className="absolute inset-0 bg-light-bg dark:bg-dark-bg pointer-events-none" />
+        {/* Layer semi-trasparente per l'effetto visivo della card e l'active state */}
+        <div className="absolute inset-0 bg-black/[0.03] dark:bg-white/[0.04] group-active:bg-black/[0.06] dark:group-active:bg-white/[0.07] transition-colors pointer-events-none" />
+        
+        <div className="relative p-5">
+          <p className="font-serif text-base md:text-lg leading-relaxed mb-3">
+            {verse.text}
+          </p>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-sans tracking-widest uppercase text-accent/70 font-medium">
+              {verse.bookName} {verse.chapter}:{verse.verse}
+            </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="p-2 text-red-400/60 hover:text-red-500 active:text-red-600 transition-colors rounded-full hover:bg-red-500/10"
+              aria-label="Rimuovi"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>
@@ -87,7 +124,7 @@ export const SavedVersesScreen: React.FC<SavedVersesScreenProps> = ({ onBack, on
 
   return (
     <div className="h-full bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text overflow-y-auto">
-      <div className="p-6 md:p-12 pb-28">
+      <div className="p-6 md:p-12 pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <header className="mb-6 pt-[max(0.5rem,env(safe-area-inset-top))]">
           <h1 className="font-serif text-2xl md:text-3xl font-medium mb-1">Versi Salvati</h1>
           {verses.length > 0 && (
@@ -107,13 +144,13 @@ export const SavedVersesScreen: React.FC<SavedVersesScreenProps> = ({ onBack, on
                 className="flex flex-col items-center justify-center py-20 text-center"
               >
                 <div className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center mb-6">
-                  <Bookmark className="w-10 h-10 text-accent/40" />
+                  <Heart className="w-10 h-10 text-accent/40" />
                 </div>
                 <p className="font-serif text-lg mb-2 opacity-60">
                   Nessun verso salvato ancora
                 </p>
                 <p className="text-sm opacity-40 font-sans max-w-xs mb-6">
-                  Inizia la tua collezione di parole sacre. Scorri i versi e premi il segnalibro per salvarli.
+                  Inizia la tua collezione di parole sacre. Scorri i versi e premi il cuore per salvarli.
                 </p>
                 <button
                   onClick={onBack}

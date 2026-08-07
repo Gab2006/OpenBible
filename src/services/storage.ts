@@ -34,13 +34,17 @@ interface BibleDB extends DBSchema {
     key: string;
     value: { id: string; verses: Verse[] };
   };
+  completed_chapters: {
+    key: string;
+    value: { bookId: string; chapter: number; completedAt: number };
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<BibleDB>>;
 
 export function initDB() {
   if (!dbPromise) {
-    dbPromise = openDB<BibleDB>('BibleReaderDB', 1, {
+    dbPromise = openDB<BibleDB>('BibleReaderDB', 2, {
       upgrade(db) {
         if (!db.objectStoreNames.contains('reading_progress')) {
           db.createObjectStore('reading_progress');
@@ -51,6 +55,9 @@ export function initDB() {
         }
         if (!db.objectStoreNames.contains('cached_chapters')) {
           db.createObjectStore('cached_chapters', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('completed_chapters')) {
+          db.createObjectStore('completed_chapters');
         }
       },
     });
@@ -115,4 +122,17 @@ export async function getCachedChapter(bookId: string, chapter: number): Promise
   const id = `${bookId}-${chapter}`;
   const cached = await db.get('cached_chapters', id);
   return cached?.verses;
+}
+
+export async function markChapterCompleted(bookId: string, chapter: number) {
+  const db = await initDB();
+  const key = `${bookId}-${chapter}`;
+  await db.put('completed_chapters', { bookId, chapter, completedAt: Date.now() }, key);
+  window.dispatchEvent(new Event('progress-changed'));
+}
+
+export async function getCompletedChapters(): Promise<Set<string>> {
+  const db = await initDB();
+  const keys = await db.getAllKeys('completed_chapters');
+  return new Set(keys);
 }

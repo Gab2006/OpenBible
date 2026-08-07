@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, BookOpen, X } from 'lucide-react';
+import { ChevronRight, BookOpen, X, Check } from 'lucide-react';
 import { books } from '../data/books';
 import { getDailyVerse } from '../data/dailyVerses';
-import { isVerseSaved, saveVerse, removeSavedVerse } from '../services/storage';
+import { isVerseSaved, saveVerse, removeSavedVerse, getCompletedChapters } from '../services/storage';
 import type { ReadingPosition } from '../services/storage';
 import { SaveButton } from './SaveButton';
 
@@ -29,11 +29,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [openTestament, setOpenTestament] = useState<'OT' | 'NT' | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDailyVerseSaved, setIsDailyVerseSaved] = useState(false);
+  const [completedChapters, setCompletedChapters] = useState<Set<string>>(new Set());
   const chapterGridRef = useRef<HTMLDivElement>(null);
 
   const otBooks = books.filter(b => b.testament === 'OT');
   const ntBooks = books.filter(b => b.testament === 'NT');
   const dailyVerse = getDailyVerse();
+
+  // Carica i capitoli completati quando si apre il bottom sheet o cambia il progresso
+  const loadProgress = useCallback(() => {
+    getCompletedChapters().then(setCompletedChapters);
+  }, []);
+
+  useEffect(() => {
+    if (openTestament) loadProgress();
+  }, [openTestament, loadProgress]);
+
+  useEffect(() => {
+    window.addEventListener('progress-changed', loadProgress);
+    return () => window.removeEventListener('progress-changed', loadProgress);
+  }, [loadProgress]);
+
+  const isBookCompleted = (bookId: string): boolean => {
+    const book = books.find(b => b.id === bookId);
+    if (!book) return false;
+    for (let ch = 1; ch <= book.chapters; ch++) {
+      if (!completedChapters.has(`${bookId}-${ch}`)) return false;
+    }
+    return true;
+  };
 
   useEffect(() => {
     isVerseSaved(dailyVerse.bookId, dailyVerse.chapter, dailyVerse.verse).then(setIsDailyVerseSaved);
@@ -72,29 +96,37 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         visible: { transition: { staggerChildren: 0.03 } },
       }}
     >
-      {list.map(book => (
-        <React.Fragment key={book.id}>
-          <motion.button
-            variants={{
-              hidden: { opacity: 0, y: 8 },
-              visible: { opacity: 1, y: 0 },
-            }}
-            onClick={() => setSelectedBook(book.id === selectedBook ? null : book.id)}
-            className={`p-3 text-left rounded-xl transition-all duration-200 border flex items-center justify-between
-              ${selectedBook === book.id
-                ? 'bg-accent/10 border-accent/40 text-accent font-medium shadow-sm'
-                : 'border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 hover:border-accent/20'}`}
-          >
-            <span className="truncate">{book.name}</span>
-            {selectedBook === book.id && (
-              <ChevronRight className="w-4 h-4 shrink-0 text-accent" />
-            )}
-          </motion.button>
-          <AnimatePresence>
-            {selectedBook === book.id && renderChapterGrid(book.id)}
-          </AnimatePresence>
-        </React.Fragment>
-      ))}
+      {list.map(book => {
+        const bookDone = isBookCompleted(book.id);
+        return (
+          <React.Fragment key={book.id}>
+            <motion.button
+              variants={{
+                hidden: { opacity: 0, y: 8 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              onClick={() => setSelectedBook(book.id === selectedBook ? null : book.id)}
+              className={`p-3 text-left rounded-xl transition-all duration-200 border flex items-center justify-between
+                ${selectedBook === book.id
+                  ? 'bg-accent/10 border-accent/40 text-accent font-medium shadow-sm'
+                  : bookDone
+                    ? 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/15'
+                    : 'border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 hover:border-accent/20'}`}
+            >
+              <span className="truncate flex items-center gap-1.5">
+                {bookDone && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                {book.name}
+              </span>
+              {selectedBook === book.id && (
+                <ChevronRight className="w-4 h-4 shrink-0 text-accent" />
+              )}
+            </motion.button>
+            <AnimatePresence>
+              {selectedBook === book.id && renderChapterGrid(book.id)}
+            </AnimatePresence>
+          </React.Fragment>
+        );
+      })}
     </motion.div>
   );
 
@@ -124,19 +156,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               visible: { transition: { staggerChildren: 0.015 } },
             }}
           >
-            {Array.from({ length: book.chapters }).map((_, i) => (
-              <motion.button
-                key={i}
-                variants={{
-                  hidden: { opacity: 0, scale: 0.8 },
-                  visible: { opacity: 1, scale: 1 },
-                }}
-                onClick={() => onSelectChapter(book.id, i + 1)}
-                className="aspect-square flex items-center justify-center rounded-xl bg-light-bg dark:bg-dark-bg text-sm font-medium border border-black/5 dark:border-white/5 hover:border-accent hover:text-accent hover:bg-accent/5 active:scale-95 transition-all duration-150"
-              >
-                {i + 1}
-              </motion.button>
-            ))}
+            {Array.from({ length: book.chapters }).map((_, i) => {
+              const chapterDone = completedChapters.has(`${book.id}-${i + 1}`);
+              return (
+                <motion.button
+                  key={i}
+                  variants={{
+                    hidden: { opacity: 0, scale: 0.8 },
+                    visible: { opacity: 1, scale: 1 },
+                  }}
+                  onClick={() => onSelectChapter(book.id, i + 1)}
+                  className={`aspect-square flex items-center justify-center rounded-xl text-sm font-medium border active:scale-95 transition-all duration-150
+                    ${chapterDone
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-light-bg dark:bg-dark-bg border-black/5 dark:border-white/5 hover:border-accent hover:text-accent hover:bg-accent/5'}`}
+                >
+                  {i + 1}
+                </motion.button>
+              );
+            })}
           </motion.div>
         </div>
       </motion.div>
@@ -156,11 +194,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   return (
-    <div className="h-full bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text overflow-y-auto relative">
+    <div className="h-full bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text relative overflow-hidden">
       {/* Immagine di sfondo decorativa */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.04] dark:opacity-[0.03] bg-[url('/nobg-icon.png')] bg-no-repeat bg-center bg-[length:150%] md:bg-[length:80%]" />
+      <div className="absolute inset-0 pointer-events-none opacity-[0.04] dark:opacity-[0.03] bg-[url('/nobg-icon.png')] bg-no-repeat bg-center bg-[length:150%] md:bg-[length:80%]" />
       
-      <div className="p-6 md:p-12 pb-28 relative z-10">
+      <div className="absolute inset-0 overflow-y-auto">
+        <div className="p-6 md:p-12 pb-[calc(7rem+env(safe-area-inset-bottom))] relative z-10">
         {/* Saluto dinamico */}
         <header className="mb-8 pt-[max(0.5rem,env(safe-area-inset-top))]">
           <p className="text-sm font-sans tracking-wider uppercase text-light-text/50 dark:text-dark-text/50 mb-1">
@@ -263,6 +302,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </motion.button>
           </div>
         </main>
+      </div>
       </div>
 
       {/* Bottom sheet dei libri */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bookmark } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface SaveButtonProps {
@@ -23,7 +23,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({ isSaved, onToggle }) => 
         }}
         transition={{ duration: 0.3 }}
       >
-        <Bookmark 
+        <Heart 
           className="w-6 h-6" 
           fill={isSaved ? 'currentColor' : 'none'} 
           strokeWidth={2}
