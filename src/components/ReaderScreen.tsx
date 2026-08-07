@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { isVerseSaved, saveVerse, removeSavedVerse, markChapterCompleted } from '../services/storage';
 import type { Verse } from '../services/storage';
 import { SaveButton } from './SaveButton';
+import { ShareButton } from './ShareButton';
 import { books } from '../data/books';
 import { fetchChapter } from '../services/bibleApi';
 
@@ -193,9 +194,10 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
         </div>
       </div>
 
-      {/* Save Button */}
-      <div className="absolute right-3 top-10 z-20">
+      {/* Azioni laterali (Save, Share) */}
+      <div className="absolute right-3 top-10 z-20 flex flex-col gap-3">
         <SaveButton isSaved={isSaved} onToggle={toggleSave} />
+        {currentVerse && <ShareButton verse={currentVerse} />}
       </div>
 
       {/* Feedback salvataggio */}
