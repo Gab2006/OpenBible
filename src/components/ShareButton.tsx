@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Share2, Loader2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { VerseShareCard } from './VerseShareCard';

@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import type { Verse } from '../services/storage';
 import '@fontsource/crimson-pro/400.css';
 import '@fontsource/crimson-pro/500.css';
