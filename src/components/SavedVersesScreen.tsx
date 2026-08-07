@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import { Trash2, BookOpen, Heart } from 'lucide-react';
 import { getAllSavedVerses, removeSavedVerse } from '../services/storage';
 import type { SavedVerse } from '../services/storage';
@@ -18,7 +18,7 @@ const SavedVerseCard: React.FC<{
   const x = useMotionValue(0);
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleDragEnd = (event: any, info: any) => {
+  const handleDragEnd = (_event: any, info: any) => {
     const offset = info.offset.x;
     
     if (isOpen) {
