@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import webpush from 'npm:web-push'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -31,7 +32,7 @@ function getVerseOfTheDay() {
   return versesOfTheDay[dayOfYear % versesOfTheDay.length]
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error(error)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
