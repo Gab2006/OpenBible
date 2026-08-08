@@ -4,7 +4,7 @@ import { useTheme } from './ThemeProvider';
 import { APP_THEMES } from '../types';
 
 export const SettingsScreen: React.FC = () => {
-  const { theme, themeId, setThemeId, isDarkMode, setIsDarkMode } = useTheme();
+  const { themeId, setThemeId, isDarkMode, setIsDarkMode } = useTheme();
 
   return (
     <div className="h-full text-light-text dark:text-dark-text overflow-y-auto">
