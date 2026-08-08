@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { APP_THEMES, rgbChannelsToHex } from '../types';
+import { APP_THEMES } from '../types';
 import type { AppTheme } from '../types';
 
 interface ThemeContextValue {
