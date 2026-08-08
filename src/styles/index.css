@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-light-bg: 250 246 239;
+    --color-light-text: 43 38 32;
+    --color-dark-bg: 26 25 23;
+    --color-dark-text: 237 230 217;
+    --color-accent: 184 145 47;
+  }
+
   body {
     @apply bg-light-bg text-light-text font-sans transition-colors duration-300;
   }

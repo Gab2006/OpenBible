@@ -8,17 +8,23 @@ export default {
     extend: {
       colors: {
         light: {
-          bg: '#FAF6EF',
-          text: '#2B2620',
+          bg: 'rgb(var(--color-light-bg) / <alpha-value>)',
+          text: 'rgb(var(--color-light-text) / <alpha-value>)',
         },
         dark: {
-          bg: '#1A1917',
-          text: '#EDE6D9',
+          bg: 'rgb(var(--color-dark-bg) / <alpha-value>)',
+          text: 'rgb(var(--color-dark-text) / <alpha-value>)',
         },
-        accent: '#B8912F',
-        'verse-bg': { light: '#FAF6EF', dark: '#1A1917' },
-        'verse-text': { light: '#2B2620', dark: '#EDE6D9' },
-        'verse-accent': '#B8912F',
+        accent: 'rgb(var(--color-accent) / <alpha-value>)',
+        'verse-bg': {
+          light: 'rgb(var(--color-light-bg) / <alpha-value>)',
+          dark: 'rgb(var(--color-dark-bg) / <alpha-value>)',
+        },
+        'verse-text': {
+          light: 'rgb(var(--color-light-text) / <alpha-value>)',
+          dark: 'rgb(var(--color-dark-text) / <alpha-value>)',
+        },
+        'verse-accent': 'rgb(var(--color-accent) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

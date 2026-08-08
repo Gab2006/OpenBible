@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { isVerseSaved, saveVerse, removeSavedVerse, markChapterCompleted } from '../services/storage';
 import type { Verse } from '../services/storage';
 import { SaveButton } from './SaveButton';
@@ -34,7 +34,6 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [direction, setDirection] = useState(0);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
-  const [hasSwipedOnce, setHasSwipedOnce] = useState(false);
 
   // Keep local state in sync with initial props when they change externally (e.g. hash routing)
   useEffect(() => {
@@ -87,7 +86,6 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
 
   const navigateTo = (dir: 1 | -1) => {
     if (!bookMeta) return;
-    setHasSwipedOnce(true);
 
     if (dir === 1) { // Next
       const isLastVerse = currentVerseNum === verses.length;
@@ -173,7 +171,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   };
 
   return (
-    <div className="relative h-full w-full bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text overflow-hidden reader-container flex flex-col">
+    <div className="relative h-full w-full text-light-text dark:text-dark-text overflow-hidden reader-container flex flex-col">
       {/* Progress bar */}
       <div className="absolute top-0 left-0 right-0 z-20 h-[3px] bg-black/5 dark:bg-white/5">
         <motion.div
@@ -220,25 +218,6 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
 
       {/* Contenuto verso — area principale */}
       <div className="flex-1 relative flex items-center justify-center">
-        {/* Indicatori swipe laterali (scompaiono dopo il primo swipe) */}
-        {!hasSwipedOnce && !isLoading && verses.length > 0 && (
-          <>
-            <motion.div
-              animate={{ opacity: [0.15, 0.4, 0.15] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute left-3 z-10 p-2 rounded-full bg-black/5 dark:bg-white/5"
-            >
-              <ChevronLeft className="w-5 h-5 opacity-50" />
-            </motion.div>
-            <motion.div
-              animate={{ opacity: [0.15, 0.4, 0.15] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute right-3 z-10 p-2 rounded-full bg-black/5 dark:bg-white/5"
-            >
-              <ChevronRight className="w-5 h-5 opacity-50" />
-            </motion.div>
-          </>
-        )}
 
         <AnimatePresence initial={false} custom={direction}>
           <motion.div

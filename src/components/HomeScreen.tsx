@@ -6,6 +6,7 @@ import { getDailyVerse } from '../data/dailyVerses';
 import { isVerseSaved, saveVerse, removeSavedVerse, getCompletedChapters } from '../services/storage';
 import type { ReadingPosition } from '../services/storage';
 import { SaveButton } from './SaveButton';
+import { useTheme } from './ThemeProvider';
 
 interface HomeScreenProps {
   readingPosition: ReadingPosition | undefined;
@@ -25,6 +26,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onContinue,
   onSelectChapter
 }) => {
+  const { theme } = useTheme();
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [openTestament, setOpenTestament] = useState<'OT' | 'NT' | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -194,9 +196,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   return (
-    <div className="h-full bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text relative overflow-hidden">
-      {/* Immagine di sfondo decorativa */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.04] dark:opacity-[0.03] bg-[url('/nobg-icon.png')] bg-no-repeat bg-center bg-[length:150%] md:bg-[length:80%]" />
+    <div className="h-full text-light-text dark:text-dark-text relative overflow-hidden">
+      {/* Immagine di sfondo decorativa (solo per il tema classico) */}
+      {theme.id === 'classic' && (
+        <div className="absolute inset-0 pointer-events-none opacity-[0.04] dark:opacity-[0.03] bg-[url('/nobg-icon.png')] bg-no-repeat bg-center bg-[length:150%] md:bg-[length:80%]" />
+      )}
       
       <div className="absolute inset-0 overflow-y-auto">
         <div className="p-6 md:p-12 pb-[calc(7rem+env(safe-area-inset-bottom))] relative z-10">

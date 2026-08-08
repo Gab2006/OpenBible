@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Share2, Loader2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { motion } from 'framer-motion';
 import { VerseShareCard } from './VerseShareCard';
 import type { Verse } from '../services/storage';
 
@@ -98,18 +99,19 @@ export const ShareButton: React.FC<ShareButtonProps> = ({ verse }) => {
 
   return (
     <>
-      <button
+      <motion.button
+        whileTap={{ scale: 0.9 }}
         onClick={handleShare}
         disabled={isGenerating}
-        className="p-3 rounded-full bg-black/5 dark:bg-white/5 active:bg-black/10 dark:active:bg-white/10 transition-colors disabled:opacity-50"
+        className="p-3 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors disabled:opacity-50"
         aria-label="Condividi verso"
       >
         {isGenerating ? (
-          <Loader2 className="w-5 h-5 animate-spin opacity-70" />
+          <Loader2 className="w-6 h-6 animate-spin" />
         ) : (
-          <Share2 className="w-5 h-5 opacity-70" />
+          <Share2 className="w-6 h-6" />
         )}
-      </button>
+      </motion.button>
 
       {/* Nodo temporaneo off-screen per html-to-image (senza opacity-0 per compatibilità Safari) */}
       <div className="absolute left-[-9999px] top-[-9999px]">

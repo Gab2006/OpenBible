@@ -5,6 +5,7 @@ import { ReaderScreen } from './components/ReaderScreen';
 import { SavedVersesScreen } from './components/SavedVersesScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { BottomNav } from './components/BottomNav';
+import { ThemeProvider } from './components/ThemeProvider';
 import { getReadingPosition, saveReadingPosition, getAllSavedVerses, initDB } from './services/storage';
 import type { ReadingPosition } from './services/storage';
 import { fetchChapter } from './services/bibleApi';
@@ -21,11 +22,6 @@ export default function App() {
   const [readingPosition, setReadingPosition] = useState<ReadingPosition | undefined>(undefined);
   const [savedCount, setSavedCount] = useState(0);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
 
   // Hash-based routing
   useEffect(() => {
@@ -122,16 +118,6 @@ export default function App() {
     return () => window.removeEventListener('verses-changed', updateSavedCount);
   }, []);
 
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
   const handlePositionChange = useCallback((bookId: string, chapter: number, verse: number) => {
     saveReadingPosition({ bookId, chapter, verse });
     setReadingPosition({ bookId, chapter, verse });
@@ -155,7 +141,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <ThemeProvider>
       <AnimatePresence mode="wait">
         {view.type === 'home' && (
           <motion.div 
@@ -225,10 +211,7 @@ export default function App() {
             transition={{ duration: 0.2 }}
             className="h-full w-full"
           >
-            <SettingsScreen 
-              isDarkMode={isDarkMode}
-              onToggleTheme={setIsDarkMode}
-            />
+            <SettingsScreen />
           </motion.div>
         )}
       </AnimatePresence>
@@ -241,6 +224,6 @@ export default function App() {
         onNavigateSettings={() => setView({ type: 'settings' })}
         savedVersesCount={savedCount}
       />
-    </>
+    </ThemeProvider>
   );
 }
