@@ -116,25 +116,22 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
         setCurrentVerseNum(currentVerseNum - 1);
       } else {
         if (currentChapter > 1) {
-          setDirection(-1);
           const prevChapter = currentChapter - 1;
-          setCurrentChapter(prevChapter);
-          // We don't know the exact verse count of prev chapter without fetching it,
-          // but we can assume it's fetched or we set it to 999 and fetch will correct it,
-          // or we fetch it first. For simplicity, let's fetch it first then set.
           fetchChapter(currentBookId, prevChapter).then(prevVerses => {
              const lastVerse = prevVerses.length > 0 ? prevVerses[prevVerses.length - 1].verse : 1;
+             setDirection(-1);
+             setCurrentChapter(prevChapter);
              setCurrentVerseNum(lastVerse);
           });
         } else {
           const bookIndex = books.findIndex(b => b.id === currentBookId);
           if (bookIndex > 0) {
-            setDirection(-1);
             const prevBook = books[bookIndex - 1];
-            setCurrentBookId(prevBook.id);
-            setCurrentChapter(prevBook.chapters);
             fetchChapter(prevBook.id, prevBook.chapters).then(prevVerses => {
               const lastVerse = prevVerses.length > 0 ? prevVerses[prevVerses.length - 1].verse : 1;
+              setDirection(-1);
+              setCurrentBookId(prevBook.id);
+              setCurrentChapter(prevBook.chapters);
               setCurrentVerseNum(lastVerse);
             });
           }
