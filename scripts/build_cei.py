@@ -6,6 +6,7 @@ import os
 import sys
 import time
 from html import unescape
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 BOOKS = [
@@ -47,7 +48,7 @@ BOOKS = [
   {"id": "ZEP", "name": "Sofonia", "chapters": 3},
   {"id": "HAG", "name": "Aggeo", "chapters": 2},
   {"id": "ZEC", "name": "Zaccaria", "chapters": 14},
-  {"id": "MAL", "name": "Malachia", "chapters": 3}, # MAL has 3 chapters in CEI
+  {"id": "MAL", "name": "Malachia", "chapters": 3},
   {"id": "MAT", "name": "Matteo", "chapters": 28},
   {"id": "MRK", "name": "Marco", "chapters": 16},
   {"id": "LUK", "name": "Luca", "chapters": 24},
@@ -77,57 +78,159 @@ BOOKS = [
   {"id": "REV", "name": "Apocalisse", "chapters": 22}
 ]
 
+
+def _extract_span_text(span_html):
+    """Estrae il testo puro da un <span>, rimuovendo tag interni (sup, i, ecc.)."""
+    # Rimuove il tag versenum/chapternum (contiene il numero del versetto, non il testo)
+    cleaned = re.sub(r'<sup[^>]*class="[^"]*versenum[^"]*"[^>]*>.*?</sup>', '', span_html, flags=re.DOTALL)
+    cleaned = re.sub(r'<span[^>]*class="[^"]*chapternum[^"]*"[^>]*>.*?</span>', '', cleaned, flags=re.DOTALL)
+    # Rimuove tutti i tag HTML rimanenti (i, b, br, ecc.) mantenendo il testo
+    cleaned = re.sub(r'<[^>]+>', ' ', cleaned)
+    cleaned = unescape(cleaned).strip()
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    return cleaned
+
+
 def fetch_chapter(book_id, book_name, chapter, retries=3):
     query_name = book_name
     if book_id == "JOS":
-        query_name = "Giosue"  # Bible Gateway CEI doesn't like the accent
+        query_name = "Giosue"
     elif book_id == "ACT":
         query_name = "Atti"
 
     query = f"{query_name} {chapter}"
     url = f"https://www.biblegateway.com/passage/?search={urllib.parse.quote(query)}&version=CEI"
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
-    
+
     for attempt in range(retries):
         try:
-            with urllib.request.urlopen(req, timeout=12) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:
                 html = resp.read().decode('utf-8')
+
+                # Estrae il div con il testo del passaggio
+                passage_match = re.search(
+                    r'<div\s+class=["\']passage-content[^"\']*["\'][^>]*>(.*?)</div>\s*</div>\s*</div>\s*</div>\s*</div>',
+                    html, re.DOTALL
+                )
+                if not passage_match:
+                    # Fallback: cerca il div result-text-style
+                    passage_match = re.search(
+                        r'<div\s+class="[^"]*result-text-style[^"]*"[^>]*>(.*)',
+                        html, re.DOTALL
+                    )
+                if not passage_match:
+                    print(f"Warning: No passage div found for {book_id} {chapter}")
+                    return book_id, chapter, []
+
+                passage_html = passage_match.group(1)
+
+                # Rimuove i titoli di sezione (<h3>) che contengono span.text
+                # e inquinerebbero il testo dei versetti
+                passage_html = re.sub(r'<h3[^>]*>.*?</h3>', '', passage_html, flags=re.DOTALL)
+
+                # Trova tutti i <span class="text BOOK-CH-VS">...</span>
+                # L'identificatore del versetto è nel class, es. "text Matt-4-6"
+                # Ogni span contiene un frammento di testo del versetto
+                # Più span con lo stesso ID vanno concatenati (poesia, citazioni cross-paragraph)
+                verse_fragments = OrderedDict()  # verse_id -> [frammenti di testo]
+                verse_num_map = {}  # verse_id -> numero versetto
+
+                # Trova i tag di apertura <span class="text XYZ-N-M">
+                open_tag_pattern = re.compile(
+                    r'<span[^>]*\bclass="([^"]*\btext\s+(\S+-\d+-\d+)\b[^"]*)"[^>]*>'
+                )
+
+                for m in open_tag_pattern.finditer(passage_html):
+                    full_class = m.group(1)
+                    verse_id = m.group(2)  # es. "Matt-4-6"
+                    content_start = m.end()
+
+                    # Gestione span annidati: conta aperture/chiusure per trovare il </span> corretto
+                    depth = 1
+                    pos = content_start
+                    while depth > 0 and pos < len(passage_html):
+                        next_open = passage_html.find('<span', pos)
+                        next_close = passage_html.find('</span>', pos)
+
+                        if next_close == -1:
+                            break
+
+                        if next_open != -1 and next_open < next_close:
+                            depth += 1
+                            pos = next_open + 5  # skip past '<span'
+                        else:
+                            depth -= 1
+                            if depth == 0:
+                                inner_html = passage_html[content_start:next_close]
+                            pos = next_close + 7  # skip past '</span>'
+
+                    if depth != 0:
+                        continue
+
+                    # Determina il numero di versetto dall'ID (ultimo numero dopo l'ultimo '-')
+                    verse_num_str = verse_id.rsplit('-', 1)[-1]
+                    try:
+                        verse_num = int(verse_num_str)
+                    except ValueError:
+                        continue
+
+                    # Estrae il testo dal frammento
+                    fragment_text = _extract_span_text(inner_html)
+
+                    if verse_id not in verse_fragments:
+                        verse_fragments[verse_id] = []
+                        verse_num_map[verse_id] = verse_num
+
+                    if fragment_text:
+                        verse_fragments[verse_id].append(fragment_text)
+
+
+                # Assembla i versetti finali
                 verses = []
-                
-                matches = re.findall(r'<(sup[^>]*class="[^"]*versenum[^"]*"[^>]*|span[^>]*class="[^"]*chapternum[^"]*"[^>]*)>(\d+).*?<\/(?:sup|span)>(.*?)(?=(?:<(?:sup[^>]*class="[^"]*versenum[^"]*"[^>]*|span[^>]*class="[^"]*chapternum[^"]*"[^>]*)>|<\/div>|<\/p>))', html, re.DOTALL)
-                
-                for tag, num, text in matches:
-                    vnum = 1 if "chapternum" in tag else int(num)
-                    clean = re.sub(r'<[^>]+>', ' ', text)
-                    clean = unescape(clean).strip()
-                    clean = re.sub(r'\s+', ' ', clean)
-                    if clean:
-                        verses.append({"verse": vnum, "text": clean})
-                        
+                for verse_id, fragments in verse_fragments.items():
+                    full_text = ' '.join(fragments)
+                    # Pulizia finale: spazi prima di punteggiatura
+                    full_text = re.sub(r'\s+([.,;:!?»)\]])', r'\1', full_text)
+                    full_text = re.sub(r'([«(\[])\s+', r'\1', full_text)
+                    full_text = re.sub(r'\s+', ' ', full_text).strip()
+
+                    if full_text:
+                        verses.append({
+                            "verse": verse_num_map[verse_id],
+                            "text": full_text
+                        })
+
                 if verses:
                     return book_id, chapter, verses
                 else:
                     print(f"Warning: No verses parsed for {book_id} {chapter}")
                     return book_id, chapter, []
+
         except Exception as e:
             if attempt == retries - 1:
                 print(f"Failed fetching {book_id} {chapter} after {retries} attempts: {e}")
-            time.sleep(1)
-            
+            time.sleep(1.5)
+
     return book_id, chapter, []
 
+
 def main():
+    force = "--force" in sys.argv
     output_path = os.path.join(os.getcwd(), "public", "bible.json")
     result_data = {}
-    
-    if os.path.exists(output_path):
+
+    if not force and os.path.exists(output_path):
         with open(output_path, "r", encoding="utf-8") as f:
             try:
                 result_data = json.load(f)
             except:
                 pass
 
-    missing_tasks = []
+    if force:
+        print("Force mode: re-downloading ALL chapters.")
+        result_data = {}
+
+    all_tasks = []
     for b in BOOKS:
         b_id = b["id"]
         b_name = b["name"]
@@ -136,28 +239,42 @@ def main():
         for ch in range(1, b["chapters"] + 1):
             ch_str = str(ch)
             if ch_str not in result_data[b_id] or not result_data[b_id][ch_str]:
-                missing_tasks.append((b_id, b_name, ch))
-                
-    print(f"Total chapters to download/re-download: {len(missing_tasks)}")
-    if not missing_tasks:
+                all_tasks.append((b_id, b_name, ch))
+
+    print(f"Total chapters to download: {len(all_tasks)}")
+    if not all_tasks:
         print("All chapters already fully downloaded and populated!")
         return
 
     completed = 0
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(fetch_chapter, b_id, b_name, ch) for b_id, b_name, ch in missing_tasks]
+    failed_chapters = []
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {
+            executor.submit(fetch_chapter, b_id, b_name, ch): (b_id, b_name, ch)
+            for b_id, b_name, ch in all_tasks
+        }
         for future in as_completed(futures):
             b_id, ch, verses = future.result()
             if verses:
                 result_data[b_id][str(ch)] = verses
+            else:
+                failed_chapters.append(f"{b_id} {ch}")
             completed += 1
-            if completed % 50 == 0 or completed == len(missing_tasks):
-                print(f"Progress: {completed}/{len(missing_tasks)} chapters downloaded.", flush=True)
-                
+            if completed % 50 == 0 or completed == len(all_tasks):
+                print(f"Progress: {completed}/{len(all_tasks)} chapters downloaded.", flush=True)
+
+    # Salvataggio intermedio prima di eventuale retry
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(result_data, f, ensure_ascii=False, indent=2)
-        
-    print(f"Download completed! CEI Bible saved to {output_path}.")
+
+    if failed_chapters:
+        print(f"\nWarning: {len(failed_chapters)} chapters failed: {', '.join(failed_chapters[:20])}")
+    else:
+        print(f"\nDownload completed successfully! All {len(all_tasks)} chapters saved.")
+
+    print(f"CEI Bible saved to {output_path}.")
+
 
 if __name__ == "__main__":
     main()
+
