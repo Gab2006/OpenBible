@@ -13,6 +13,7 @@ export const SettingsScreen: React.FC = () => {
   const [isUpdatingPush, setIsUpdatingPush] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Check if we already have permission and a subscription
@@ -28,6 +29,12 @@ export const SettingsScreen: React.FC = () => {
       if (savedTime) setNotifyTime(savedTime);
     };
     checkPushStatus();
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, []);
 
   const handleToggleNotifications = async () => {
@@ -48,21 +55,39 @@ export const SettingsScreen: React.FC = () => {
     }
   };
 
-  const handleTimeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const syncPushNotificationTime = async (timeToSync: string) => {
+    if (!notificationsEnabled) return;
+    try {
+      setIsUpdatingPush(true);
+      await subscribeToPushNotifications(timeToSync);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsUpdatingPush(false);
+    }
+  };
+
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = e.target.value;
     setNotifyTime(newTime);
     localStorage.setItem('notify_time', newTime);
-    
-    // Se le notifiche sono attive, aggiorna subito l'orario nel backend
+
     if (notificationsEnabled) {
-      try {
-        setIsUpdatingPush(true);
-        await subscribeToPushNotifications(newTime);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsUpdatingPush(false);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
+      debounceTimerRef.current = setTimeout(() => {
+        syncPushNotificationTime(newTime);
+        debounceTimerRef.current = null;
+      }, 1200);
+    }
+  };
+
+  const handleTimeBlur = () => {
+    if (notificationsEnabled && debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+      syncPushNotificationTime(notifyTime);
     }
   };
 
@@ -145,7 +170,7 @@ export const SettingsScreen: React.FC = () => {
                       id="notify-time"
                       value={notifyTime}
                       onChange={handleTimeChange}
-                      disabled={isUpdatingPush}
+                      onBlur={handleTimeBlur}
                       className="bg-white dark:bg-black/40 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-accent outline-none"
                     />
                   </div>
