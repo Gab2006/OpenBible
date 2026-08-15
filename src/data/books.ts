@@ -44,7 +44,7 @@ export const books: Book[] = [
   { id: 'ZEP', name: 'Sofonia', testament: 'OT', chapters: 3 },
   { id: 'HAG', name: 'Aggeo', testament: 'OT', chapters: 2 },
   { id: 'ZEC', name: 'Zaccaria', testament: 'OT', chapters: 14 },
-  { id: 'MAL', name: 'Malachia', testament: 'OT', chapters: 4 },
+  { id: 'MAL', name: 'Malachia', testament: 'OT', chapters: 3 },
   { id: 'MAT', name: 'Matteo', testament: 'NT', chapters: 28 },
   { id: 'MRK', name: 'Marco', testament: 'NT', chapters: 16 },
   { id: 'LUK', name: 'Luca', testament: 'NT', chapters: 24 },

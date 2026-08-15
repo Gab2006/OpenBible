@@ -7,7 +7,7 @@ import type { Verse } from '../services/storage';
 import { SaveButton } from './SaveButton';
 import { ShareButton } from './ShareButton';
 import { books } from '../data/books';
-import { fetchChapter } from '../services/bibleApi';
+import { fetchChapter, prefetchNextChapter } from '../services/bibleApi';
 
 interface ReaderScreenProps {
   initialBookId: string;
@@ -54,6 +54,11 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
         setVerses(chapterVerses);
         setError(fetchError);
         setIsLoading(false);
+
+        // Se abbiamo caricato con successo il capitolo corrente, scateniamo il prefetch di quello successivo
+        if (!fetchError && chapterVerses.length > 0) {
+          prefetchNextChapter(currentBookId, currentChapter);
+        }
       }
     };
     load();
