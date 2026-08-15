@@ -59,7 +59,10 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
-  const urlToOpen = event.notification.data?.url || '/';
+  let urlToOpen = event.notification.data?.url || '/';
+  if (urlToOpen.includes('#/reader/')) {
+    urlToOpen += (urlToOpen.includes('?') ? '&' : '?') + 'source=notification';
+  }
   
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

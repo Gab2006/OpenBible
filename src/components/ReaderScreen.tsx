@@ -13,7 +13,7 @@ interface ReaderScreenProps {
   initialBookId: string;
   initialChapter: number;
   initialVerse: number;
-  source: 'reading' | 'saved' | 'random';
+  source: 'reading' | 'saved' | 'random' | 'notification';
   onHome: () => void;
   onPositionChange: (bookId: string, chapter: number, verse: number) => void;
 }

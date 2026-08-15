@@ -13,7 +13,7 @@ import { books } from './data/books';
 
 type ViewState = 
   | { type: 'home' }
-  | { type: 'reader', bookId: string, chapter: number, verse: number, source: 'reading' | 'saved' | 'random' }
+  | { type: 'reader', bookId: string, chapter: number, verse: number, source: 'reading' | 'saved' | 'random' | 'notification' }
   | { type: 'saved' }
   | { type: 'settings' };
 
@@ -28,7 +28,10 @@ export default function App() {
     const handleHashChange = () => {
       const hash = window.location.hash;
       if (hash.startsWith('#/reader/')) {
-        const parts = hash.split('/');
+        const [pathPart, queryPart] = hash.split('?');
+        const parts = pathPart.split('/');
+        const isNotification = queryPart === 'source=notification';
+        
         if (parts.length >= 5) {
           const bookId = parts[2];
           const chapter = parseInt(parts[3], 10);
@@ -36,7 +39,8 @@ export default function App() {
           if (bookId && !isNaN(chapter) && !isNaN(verse)) {
             setView(prev => {
               if (prev.type === 'reader' && prev.bookId === bookId && prev.chapter === chapter && prev.verse === verse) return prev;
-              return { type: 'reader', bookId, chapter, verse, source: prev.type === 'reader' ? prev.source : 'reading' };
+              const source = isNotification ? 'notification' : (prev.type === 'reader' ? prev.source : 'reading');
+              return { type: 'reader', bookId, chapter, verse, source };
             });
             return;
           }
@@ -67,7 +71,9 @@ export default function App() {
       window.location.hash = '/settings';
     } else if (view.type === 'reader') {
       const expectedHash = `#/reader/${view.bookId}/${view.chapter}/${view.verse}`;
-      if (hash !== expectedHash) {
+      // Remove query parameters from the hash for comparison
+      const currentHashPath = hash.split('?')[0];
+      if (currentHashPath !== expectedHash) {
         window.location.hash = `/reader/${view.bookId}/${view.chapter}/${view.verse}`;
       }
     }
