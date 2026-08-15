@@ -260,7 +260,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
             <div className="relative z-10 pr-8">
               <p className="text-xs uppercase tracking-widest text-accent font-sans font-medium mb-3">
-                Verso del Giorno
+                Ispirazione Giornaliera
               </p>
               <p className="font-serif text-base md:text-lg leading-relaxed mb-3 italic">
                 {dailyVerse.text}
