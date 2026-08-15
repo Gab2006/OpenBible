@@ -44,8 +44,8 @@ let dbPromise: Promise<IDBPDatabase<BibleDB>>;
 
 export function initDB() {
   if (!dbPromise) {
-    dbPromise = openDB<BibleDB>('BibleReaderDB', 2, {
-      upgrade(db) {
+    dbPromise = openDB<BibleDB>('BibleReaderDB', 3, {
+      upgrade(db, oldVersion, _newVersion, transaction) {
         if (!db.objectStoreNames.contains('reading_progress')) {
           db.createObjectStore('reading_progress');
         }
@@ -59,10 +59,51 @@ export function initDB() {
         if (!db.objectStoreNames.contains('completed_chapters')) {
           db.createObjectStore('completed_chapters');
         }
+
+        // Migrazione da v2 a v3: invalidare cache Diodati
+        if (oldVersion <= 2 && oldVersion > 0) {
+          transaction.objectStore('cached_chapters').clear();
+        }
       },
     });
+
+    // Dopo aver aperto il DB, migra i testi dei versetti salvati in background
+    dbPromise.then(() => migrateSavedVersesToCEI());
   }
   return dbPromise;
+}
+
+/**
+ * Migra i versetti salvati dalla traduzione Diodati alla CEI2008.
+ * Usa un flag in localStorage per evitare di ripetere la migrazione.
+ */
+async function migrateSavedVersesToCEI() {
+  const MIGRATION_KEY = 'cei2008_migration_done';
+  if (localStorage.getItem(MIGRATION_KEY)) return;
+
+  try {
+    // Import dinamico per evitare dipendenze circolari
+    const { fetchSingleVerse } = await import('./bibleApi');
+    const db = await dbPromise;
+    const allVerses = await db.getAll('saved_verses');
+
+    if (allVerses.length === 0) {
+      localStorage.setItem(MIGRATION_KEY, '1');
+      return;
+    }
+
+    for (const verse of allVerses) {
+      const newText = await fetchSingleVerse(verse.bookId, verse.chapter, verse.verse);
+      if (newText) {
+        await db.put('saved_verses', { ...verse, text: newText });
+      }
+    }
+
+    localStorage.setItem(MIGRATION_KEY, '1');
+    window.dispatchEvent(new Event('verses-changed'));
+  } catch (error) {
+    console.error('Errore durante la migrazione dei versetti salvati:', error);
+  }
 }
 
 export async function saveReadingPosition(position: ReadingPosition) {

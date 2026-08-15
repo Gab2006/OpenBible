@@ -2,7 +2,22 @@ import { cacheChapter, getCachedChapter } from './storage';
 import type { Verse } from './storage';
 import { getBookById } from '../data/books';
 
-const TRANSLATION_ID = 'ita_dio'; // Giovanni Diodati
+const BIBLE_VERSION = 'CEI2008';
+const BIBLEGET_BASE_URL = 'https://query.bibleget.io/v3/index.php';
+
+interface BibleGetResult {
+  book: string;
+  chapter: number;
+  verse: string; // BibleGet restituisce il numero come stringa
+  text: string;
+  version: string;
+  bookabbrev: string;
+}
+
+interface BibleGetResponse {
+  results: BibleGetResult[];
+  errors: string[];
+}
 
 export async function fetchChapter(bookId: string, chapter: number): Promise<Verse[]> {
   const cached = await getCachedChapter(bookId, chapter);
@@ -10,48 +25,37 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<Ver
     return cached;
   }
 
-  const bookName = getBookById(bookId)?.name || bookId;
+  const book = getBookById(bookId);
+  const bookName = book?.name || bookId;
 
   try {
-    const response = await fetch(`https://bible.helloao.org/api/${TRANSLATION_ID}/${bookId}/${chapter}.json`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch chapter ${bookId} ${chapter}`);
-    }
-    const data = await response.json();
-    
-    const verses: Verse[] = [];
-    
-    if (data.chapter && Array.isArray(data.chapter.content)) {
-      for (const item of data.chapter.content) {
-        if (item.type === 'verse') {
-          // item.content is usually an array of strings and objects (for footnotes, etc)
-          // We will extract just the raw text
-          let text = '';
-          if (Array.isArray(item.content)) {
-            for (const c of item.content) {
-              if (typeof c === 'string') {
-                text += c;
-              } else if (typeof c === 'object' && c !== null) {
-                // If there's an object like a footnote or word-level data, try to extract 'text'
-                // For Free Use Bible API, text is sometimes in c.text
-                if (typeof c.text === 'string') text += c.text;
-                else if (typeof c.content === 'string') text += c.content;
-                else if (Array.isArray(c.content)) {
-                  // Fallback for nested content
-                  text += c.content.filter((x: any) => typeof x === 'string').join('');
-                }
-              }
-            }
-          } else if (typeof item.content === 'string') {
-             text = item.content;
-          }
+    // Senza specificare range di versetti, BibleGet restituisce l'intero capitolo
+    const query = `${bookName}${chapter}`;
+    const url = `${BIBLEGET_BASE_URL}?query=${encodeURIComponent(query)}&version=${BIBLE_VERSION}&return=json`;
 
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Errore nel recupero del capitolo ${bookName} ${chapter}`);
+    }
+
+    const data: BibleGetResponse = await response.json();
+
+    if (data.errors && data.errors.length > 0) {
+      console.error('Errori BibleGet:', data.errors);
+    }
+
+    const verses: Verse[] = [];
+
+    if (data.results && Array.isArray(data.results)) {
+      for (const item of data.results) {
+        const verseNum = parseInt(item.verse, 10);
+        if (!isNaN(verseNum) && item.text) {
           verses.push({
             bookId,
             bookName,
             chapter,
-            verse: item.number,
-            text: text.trim() || '...',
+            verse: verseNum,
+            text: item.text.trim() || '...',
           });
         }
       }
@@ -63,7 +67,32 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<Ver
     return verses;
 
   } catch (error) {
-    console.error("Error fetching Bible verse:", error);
+    console.error("Errore nel recupero del versetto biblico:", error);
     return [];
+  }
+}
+
+/**
+ * Recupera un singolo versetto dalla nuova API.
+ * Usato per la migrazione dei versetti salvati.
+ */
+export async function fetchSingleVerse(bookId: string, chapter: number, verse: number): Promise<string | null> {
+  const book = getBookById(bookId);
+  const bookName = book?.name || bookId;
+
+  try {
+    const query = `${bookName}${chapter},${verse}`;
+    const url = `${BIBLEGET_BASE_URL}?query=${encodeURIComponent(query)}&version=${BIBLE_VERSION}&return=json`;
+
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const data: BibleGetResponse = await response.json();
+    if (data.results && data.results.length > 0) {
+      return data.results[0].text.trim() || null;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }

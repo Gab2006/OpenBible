@@ -12,7 +12,7 @@ precacheAndRoute(self.__WB_MANIFEST || []);
 
 // Runtime caching for Bible API
 registerRoute(
-  /^https:\/\/bible\.helloao\.org\/api\/.*/i,
+  /^https:\/\/query\.bibleget\.io\/v3\/.*/i,
   new CacheFirst({
     cacheName: 'bible-api-cache',
     plugins: [

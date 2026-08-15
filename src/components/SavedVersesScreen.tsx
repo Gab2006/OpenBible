@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, animate, useDragControls } from 'framer-motion';
 import { Trash2, BookOpen, Heart } from 'lucide-react';
 import { getAllSavedVerses, removeSavedVerse } from '../services/storage';
 import type { SavedVerse } from '../services/storage';
@@ -17,6 +17,7 @@ const SavedVerseCard: React.FC<{
 }> = ({ verse, onSelect, onRemove }) => {
   const x = useMotionValue(0);
   const [isOpen, setIsOpen] = useState(false);
+  const dragControls = useDragControls();
 
   const handleDragEnd = (_event: any, info: any) => {
     const offset = info.offset.x;
@@ -59,8 +60,9 @@ const SavedVerseCard: React.FC<{
     <div className="relative overflow-hidden rounded-2xl">
       {/* Layer rosso dietro la card (visibile con lo swipe) */}
       <div
-        className="absolute inset-0 bg-red-500/10 dark:bg-red-500/20 rounded-2xl flex items-center justify-end pr-6 cursor-pointer"
+        className="absolute inset-0 bg-red-500/10 dark:bg-red-500/20 rounded-2xl flex items-center justify-end pr-6 cursor-pointer touch-pan-y"
         onClick={onRemove}
+        onPointerDown={(e) => dragControls.start(e)}
       >
         <div className="flex flex-col items-center gap-1 text-red-500">
           <Trash2 className="w-6 h-6" />
@@ -72,11 +74,12 @@ const SavedVerseCard: React.FC<{
       <motion.div
         style={{ x }}
         drag="x"
+        dragControls={dragControls}
         dragConstraints={isOpen ? { left: -200, right: 0 } : { left: -100, right: 0 }}
         dragElastic={0.1}
         onDragEnd={handleDragEnd}
         onClick={handleClick}
-        className="group relative rounded-2xl border-l-4 border-accent/60 cursor-pointer overflow-hidden"
+        className="group relative rounded-2xl border-l-4 border-accent/60 cursor-pointer overflow-hidden touch-pan-y"
       >
         {/* Layer solido per bloccare la visibilità del cestino sottostante */}
         <div className="absolute inset-0 bg-light-bg dark:bg-dark-bg pointer-events-none" />

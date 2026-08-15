@@ -12,15 +12,15 @@ if (vapidPublicKey && vapidPrivateKey) {
   webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
 }
 
-// 365 popular Bible verses for "Verse of the Day"
+// 365 popular Bible verses for "Verse of the Day" — Traduzione CEI2008
 // We pick one deterministically based on the day of the year.
 const versesOfTheDay = [
-  { bookId: 'GEN', chapter: 1, verse: 1, text: 'Nel principio Iddio creò i cieli e la terra.' },
-  { bookId: 'JHN', chapter: 3, verse: 16, text: 'Poiché Iddio ha tanto amato il mondo, che ha dato il suo unigenito Figliuolo, affinché chiunque crede in lui non perisca, ma abbia vita eterna.' },
-  { bookId: 'PSA', chapter: 23, verse: 1, text: 'L\'Eterno è il mio pastore; nulla mi mancherà.' },
+  { bookId: 'GEN', chapter: 1, verse: 1, text: 'In principio Dio creò il cielo e la terra.' },
+  { bookId: 'JHN', chapter: 3, verse: 16, text: 'Dio infatti ha tanto amato il mondo da dare il Figlio unigenito, perché chiunque crede in lui non vada perduto, ma abbia la vita eterna.' },
+  { bookId: 'PSA', chapter: 23, verse: 1, text: 'Salmo. Di Davide. Il Signore è il mio pastore: non manco di nulla.' },
   // ... In a real app we'd have 365. For this example, we just pick from a few.
-  { bookId: 'ROM', chapter: 8, verse: 28, text: 'Or noi sappiamo che tutte le cose cooperano al bene di quelli che amano Iddio, i quali son chiamati secondo il suo proponimento.' },
-  { bookId: 'PHP', chapter: 4, verse: 13, text: 'Io posso ogni cosa in colui che mi fortifica.' }
+  { bookId: 'ROM', chapter: 8, verse: 28, text: 'Del resto, noi sappiamo che tutto concorre al bene, per quelli che amano Dio, per coloro che sono stati chiamati secondo il suo disegno.' },
+  { bookId: 'PHP', chapter: 4, verse: 13, text: 'Tutto posso in colui che mi dà la forza.' }
 ]
 
 function getVerseOfTheDay() {
