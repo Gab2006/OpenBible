@@ -136,10 +136,16 @@ export default function App() {
     });
   }, []);
 
-  const handleRandomVerse = () => {
+  const handleRandomVerse = async () => {
     const randomBook = books[Math.floor(Math.random() * books.length)];
     const randomChapter = Math.floor(Math.random() * randomBook.chapters) + 1;
-    setView({ type: 'reader', bookId: randomBook.id, chapter: randomChapter, verse: 1, source: 'random' });
+    
+    const { verses } = await fetchChapter(randomBook.id, randomChapter);
+    const randomVerse = verses.length > 0 
+      ? verses[Math.floor(Math.random() * verses.length)].verse 
+      : 1;
+
+    setView({ type: 'reader', bookId: randomBook.id, chapter: randomChapter, verse: randomVerse, source: 'random' });
   };
 
   if (isInitializing) {
