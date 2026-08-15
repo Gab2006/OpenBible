@@ -30,6 +30,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   const [currentChapter, setCurrentChapter] = useState(initialChapter);
   const [currentVerseNum, setCurrentVerseNum] = useState(initialVerse);
   const [verses, setVerses] = useState<Verse[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [direction, setDirection] = useState(0);
@@ -47,9 +48,11 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
     let active = true;
     const load = async () => {
       setIsLoading(true);
-      const chapterVerses = await fetchChapter(currentBookId, currentChapter);
+      setError(null);
+      const { verses: chapterVerses, error: fetchError } = await fetchChapter(currentBookId, currentChapter);
       if (active) {
         setVerses(chapterVerses);
+        setError(fetchError);
         setIsLoading(false);
       }
     };
@@ -117,7 +120,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
       } else {
         if (currentChapter > 1) {
           const prevChapter = currentChapter - 1;
-          fetchChapter(currentBookId, prevChapter).then(prevVerses => {
+          fetchChapter(currentBookId, prevChapter).then(({ verses: prevVerses }) => {
              const lastVerse = prevVerses.length > 0 ? prevVerses[prevVerses.length - 1].verse : 1;
              setDirection(-1);
              setCurrentChapter(prevChapter);
@@ -127,7 +130,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
           const bookIndex = books.findIndex(b => b.id === currentBookId);
           if (bookIndex > 0) {
             const prevBook = books[bookIndex - 1];
-            fetchChapter(prevBook.id, prevBook.chapters).then(prevVerses => {
+            fetchChapter(prevBook.id, prevBook.chapters).then(({ verses: prevVerses }) => {
               const lastVerse = prevVerses.length > 0 ? prevVerses[prevVerses.length - 1].verse : 1;
               setDirection(-1);
               setCurrentBookId(prevBook.id);
@@ -244,6 +247,24 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
                 <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
                 <span className="text-sm opacity-40 font-sans">Caricamento…</span>
               </motion.div>
+            ) : error ? (
+              <div className="flex flex-col items-center gap-4 text-center px-4">
+                <p className="opacity-70 text-base font-sans">{error}</p>
+                <button 
+                  onClick={() => {
+                    setIsLoading(true);
+                    setError(null);
+                    fetchChapter(currentBookId, currentChapter).then(({verses: v, error: e}) => {
+                      setVerses(v);
+                      setError(e);
+                      setIsLoading(false);
+                    });
+                  }}
+                  className="px-5 py-2 mt-2 bg-accent/20 text-accent rounded-full text-sm font-medium font-sans active:scale-95 transition-transform"
+                >
+                  Riprova
+                </button>
+              </div>
             ) : currentVerse ? (
               <>
                 <p className="font-serif text-[clamp(22px,5.5vw,38px)] text-center leading-relaxed max-w-2xl select-none">

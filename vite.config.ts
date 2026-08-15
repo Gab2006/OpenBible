@@ -16,6 +16,7 @@ export default defineConfig({
       },
       injectManifest: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        rollupFormat: 'iife',
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'maskable-icon-512x512.png'],
       manifest: {

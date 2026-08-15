@@ -16,13 +16,13 @@ interface BibleGetResult {
 
 interface BibleGetResponse {
   results: BibleGetResult[];
-  errors: string[];
+  errors: { errNum: number; errMessage: string }[];
 }
 
-export async function fetchChapter(bookId: string, chapter: number): Promise<Verse[]> {
+export async function fetchChapter(bookId: string, chapter: number): Promise<{ verses: Verse[], error: string | null }> {
   const cached = await getCachedChapter(bookId, chapter);
   if (cached && cached.length > 0) {
-    return cached;
+    return { verses: cached, error: null };
   }
 
   const book = getBookById(bookId);
@@ -35,13 +35,20 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<Ver
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`Errore nel recupero del capitolo ${bookName} ${chapter}`);
+      if (response.status === 429) {
+        return { verses: [], error: 'Troppe richieste. Attendi qualche istante e riprova.' };
+      }
+      return { verses: [], error: `Errore di connessione (${response.status})` };
     }
 
     const data: BibleGetResponse = await response.json();
 
     if (data.errors && data.errors.length > 0) {
       console.error('Errori BibleGet:', data.errors);
+      if (data.errors.some(e => e.errNum === 12)) {
+        return { verses: [], error: 'Troppe richieste. Attendi qualche istante e riprova.' };
+      }
+      return { verses: [], error: 'Impossibile caricare il capitolo.' };
     }
 
     const verses: Verse[] = [];
@@ -64,11 +71,11 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<Ver
     if (verses.length > 0) {
       await cacheChapter(bookId, chapter, verses);
     }
-    return verses;
+    return { verses, error: null };
 
   } catch (error) {
     console.error("Errore nel recupero del versetto biblico:", error);
-    return [];
+    return { verses: [], error: 'Errore di rete. Controlla la tua connessione.' };
   }
 }
 
