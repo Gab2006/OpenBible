@@ -246,7 +246,7 @@ export const SettingsScreen: React.FC = () => {
                 <span className="font-serif text-xl font-medium opacity-80">A</span>
               </div>
               
-              <div className="mt-2 p-4 bg-white dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/5 flex flex-col items-center justify-center min-h-[120px] shadow-sm dark:shadow-none">
+              <div className="mt-2 p-4 bg-light-bg dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/5 flex flex-col items-center justify-center min-h-[120px]">
                 <p 
                   className="font-serif text-center leading-relaxed select-none" 
                   style={{ fontSize: 'var(--verse-font-size)' }}
