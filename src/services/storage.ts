@@ -38,13 +38,17 @@ interface BibleDB extends DBSchema {
     key: string;
     value: { bookId: string; chapter: number; completedAt: number };
   };
+  reading_days: {
+    key: string;
+    value: { date: string; timestamp: number };
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<BibleDB>>;
 
 export function initDB() {
   if (!dbPromise) {
-    dbPromise = openDB<BibleDB>('BibleReaderDB', 3, {
+    dbPromise = openDB<BibleDB>('BibleReaderDB', 4, {
       upgrade(db, oldVersion, _newVersion, transaction) {
         if (!db.objectStoreNames.contains('reading_progress')) {
           db.createObjectStore('reading_progress');
@@ -59,10 +63,15 @@ export function initDB() {
         if (!db.objectStoreNames.contains('completed_chapters')) {
           db.createObjectStore('completed_chapters');
         }
+        if (!db.objectStoreNames.contains('reading_days')) {
+          db.createObjectStore('reading_days', { keyPath: 'date' });
+        }
 
         // Migrazione da v2 a v3: invalidare cache Diodati
         if (oldVersion <= 2 && oldVersion > 0) {
-          transaction.objectStore('cached_chapters').clear();
+          if (db.objectStoreNames.contains('cached_chapters')) {
+            transaction.objectStore('cached_chapters').clear();
+          }
         }
       },
     });
@@ -109,6 +118,8 @@ async function migrateSavedVersesToCEI() {
 export async function saveReadingPosition(position: ReadingPosition) {
   const db = await initDB();
   await db.put('reading_progress', position, 'current');
+  const dateStr = new Date().toISOString().split('T')[0];
+  await db.put('reading_days', { date: dateStr, timestamp: Date.now() });
 }
 
 export async function getReadingPosition(): Promise<ReadingPosition | undefined> {
@@ -176,4 +187,54 @@ export async function getCompletedChapters(): Promise<Set<string>> {
   const db = await initDB();
   const keys = await db.getAllKeys('completed_chapters');
   return new Set(keys);
+}
+
+export async function getSavedVersesCount(): Promise<number> {
+  const db = await initDB();
+  return db.count('saved_verses');
+}
+
+export async function getReadingStreak(): Promise<number> {
+  const db = await initDB();
+  const allDays = await db.getAll('reading_days');
+  if (allDays.length === 0) return 0;
+  
+  allDays.sort((a, b) => b.date.localeCompare(a.date));
+  
+  let streak = 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  let expectedDate = new Date(today);
+  const firstDayStr = allDays[0].date;
+  const todayStr = today.toISOString().split('T')[0];
+  
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
+  let startIndex = 0;
+  if (firstDayStr === todayStr) {
+    streak = 1;
+    expectedDate.setDate(expectedDate.getDate() - 1);
+    startIndex = 1;
+  } else if (firstDayStr === yesterdayStr) {
+    streak = 1;
+    expectedDate.setDate(expectedDate.getDate() - 2);
+    startIndex = 1;
+  } else {
+    return 0;
+  }
+  
+  for (let i = startIndex; i < allDays.length; i++) {
+    const expectedStr = expectedDate.toISOString().split('T')[0];
+    if (allDays[i].date === expectedStr) {
+      streak++;
+      expectedDate.setDate(expectedDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  
+  return streak;
 }

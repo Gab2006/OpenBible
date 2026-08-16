@@ -9,6 +9,8 @@ interface ThemeContextValue {
   setThemeId: (id: string) => void;
   isDarkMode: boolean;
   setIsDarkMode: (dark: boolean) => void;
+  fontSize: number;
+  setFontSize: (size: number) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -28,6 +30,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (saved) return saved === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
+  const [fontSize, setFontSizeState] = useState<number>(() => {
+    const saved = localStorage.getItem('fontSize');
+    return saved ? parseInt(saved, 10) : 100;
+  });
 
   const theme = APP_THEMES.find(t => t.id === themeId) || APP_THEMES[0];
 
@@ -36,7 +42,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('themeId', id);
   };
 
-  // Applica le CSS custom properties per i colori
+  const setFontSize = (size: number) => {
+    setFontSizeState(size);
+    localStorage.setItem('fontSize', size.toString());
+  };
+
+  // Applica le CSS custom properties per i colori e grandezza font
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty('--color-light-bg', theme.light.bg);
@@ -44,7 +55,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--color-dark-bg', theme.dark.bg);
     root.style.setProperty('--color-dark-text', theme.dark.text);
     root.style.setProperty('--color-accent', theme.accent);
-  }, [theme]);
+    root.style.setProperty('--verse-font-size', `calc(clamp(22px, 5.5vw, 38px) * ${fontSize / 100})`);
+  }, [theme, fontSize]);
 
   // Applica la classe dark sul <html>
   useEffect(() => {
@@ -117,7 +129,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme, isDarkMode]);
 
   return (
-    <ThemeContext.Provider value={{ theme, themeId, setThemeId, isDarkMode, setIsDarkMode }}>
+    <ThemeContext.Provider value={{ theme, themeId, setThemeId, isDarkMode, setIsDarkMode, fontSize, setFontSize }}>
       {children}
     </ThemeContext.Provider>
   );

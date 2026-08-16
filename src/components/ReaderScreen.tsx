@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { Heart } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { isVerseSaved, saveVerse, removeSavedVerse, markChapterCompleted } from '../services/storage';
 import type { Verse } from '../services/storage';
 import { SaveButton } from './SaveButton';
@@ -34,7 +34,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [direction, setDirection] = useState(0);
-  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [showChapterComplete, setShowChapterComplete] = useState(false);
 
   // Keep local state in sync with initial props when they change externally (e.g. hash routing)
   useEffect(() => {
@@ -86,9 +86,6 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
     } else {
       await saveVerse(currentVerse);
       setIsSaved(true);
-      // Feedback visivo al salvataggio
-      setShowSaveConfirm(true);
-      setTimeout(() => setShowSaveConfirm(false), 1200);
     }
   };
 
@@ -103,20 +100,25 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
       } else if (isLastVerse) {
         // Capitolo completato: segna il progresso
         markChapterCompleted(currentBookId, currentChapter);
-        const isLastChapter = currentChapter === bookMeta.chapters;
-        if (!isLastChapter) {
-          setDirection(1);
-          setCurrentChapter(currentChapter + 1);
-          setCurrentVerseNum(1);
-        } else {
-          const bookIndex = books.findIndex(b => b.id === currentBookId);
-          if (bookIndex < books.length - 1) {
+        
+        setShowChapterComplete(true);
+        setTimeout(() => {
+          setShowChapterComplete(false);
+          const isLastChapter = currentChapter === bookMeta.chapters;
+          if (!isLastChapter) {
             setDirection(1);
-            setCurrentBookId(books[bookIndex + 1].id);
-            setCurrentChapter(1);
+            setCurrentChapter(currentChapter + 1);
             setCurrentVerseNum(1);
+          } else {
+            const bookIndex = books.findIndex(b => b.id === currentBookId);
+            if (bookIndex < books.length - 1) {
+              setDirection(1);
+              setCurrentBookId(books[bookIndex + 1].id);
+              setCurrentChapter(1);
+              setCurrentVerseNum(1);
+            }
           }
-        }
+        }, 1500);
       }
     } else { // Prev
       if (currentVerseNum > 1) {
@@ -203,24 +205,6 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
         {currentVerse && <ShareButton verse={currentVerse} />}
       </div>
 
-      {/* Feedback salvataggio */}
-      <AnimatePresence>
-        {showSaveConfirm && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            transition={{ duration: 0.3 }}
-            className="fixed left-0 right-0 bottom-[calc(1.5rem+3.5rem+2rem)] z-[60] flex justify-center pointer-events-none"
-          >
-            <div className="bg-accent/90 text-white rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
-              <Heart className="w-6 h-6" fill="white" />
-              <span className="font-sans font-medium text-sm">Salvato!</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Contenuto verso — area principale */}
       <div className="flex-1 relative flex items-center justify-center">
 
@@ -272,7 +256,10 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
               </div>
             ) : currentVerse ? (
               <>
-                <p className="font-serif text-[clamp(22px,5.5vw,38px)] text-center leading-relaxed max-w-2xl select-none">
+                <p 
+                  className="font-serif text-center leading-relaxed max-w-2xl select-none"
+                  style={{ fontSize: 'var(--verse-font-size)' }}
+                >
                   {currentVerse.text}
                 </p>
                 <div className="mt-8 text-sm font-sans tracking-widest uppercase opacity-50 text-accent font-medium">
@@ -285,6 +272,31 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Overlay Capitolo Completato */}
+      <AnimatePresence>
+        {showChapterComplete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-light-bg/80 dark:bg-dark-bg/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="flex flex-col items-center gap-4 text-accent"
+            >
+              <CheckCircle2 size={64} strokeWidth={1.5} />
+              <h2 className="text-2xl font-serif text-light-text dark:text-dark-text">
+                Capitolo {currentChapter} completato
+              </h2>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

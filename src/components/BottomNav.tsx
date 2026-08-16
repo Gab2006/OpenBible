@@ -41,7 +41,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       >
         <Heart className="w-6 h-6" />
         {savedVersesCount > 0 && (
-          <span className="absolute top-0 right-0 w-4 h-4 bg-accent text-white rounded-full text-[10px] flex items-center justify-center font-medium">
+          <span className="absolute top-0 right-0 min-w-[16px] h-4 px-1 w-auto bg-accent text-white rounded-full text-[10px] flex items-center justify-center font-medium">
             {savedVersesCount}
           </span>
         )}

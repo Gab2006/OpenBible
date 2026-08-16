@@ -35,3 +35,12 @@ html, body, #root {
   touch-action: pan-y; 
   overscroll-behavior-y: none;
 }
+
+/* Hides scrollbars globally but keeps scrolling functionality */
+*::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

@@ -9,6 +9,7 @@ export async function exportData() {
   const completedChapters = await Promise.all(
     completedChaptersKeys.map(key => db.get('completed_chapters', key))
   );
+  const readingDays = await db.getAll('reading_days');
 
   const localPreferences: Record<string, string> = {};
   for (let i = 0; i < localStorage.length; i++) {
@@ -25,6 +26,7 @@ export async function exportData() {
     savedVerses,
     completedChapters,
     localPreferences,
+    readingDays,
   };
 
   const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -74,6 +76,16 @@ export async function importData(file: File): Promise<boolean> {
           for (const chapter of data.completedChapters) {
             const key = `${chapter.bookId}-${chapter.chapter}`;
             await tx.store.put(chapter, key);
+          }
+          await tx.done;
+        }
+
+        // Restore Reading Days (Stats)
+        if (data.readingDays && Array.isArray(data.readingDays)) {
+          const tx = db.transaction('reading_days', 'readwrite');
+          await tx.store.clear();
+          for (const day of data.readingDays) {
+            await tx.store.put(day);
           }
           await tx.done;
         }

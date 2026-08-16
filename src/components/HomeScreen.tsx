@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, BookOpen, X, Check } from 'lucide-react';
 import { books } from '../data/books';
 import { getDailyVerse } from '../data/dailyVerses';
-import { isVerseSaved, saveVerse, removeSavedVerse, getCompletedChapters } from '../services/storage';
+import { isVerseSaved, saveVerse, removeSavedVerse, getCompletedChapters, getSavedVersesCount, getReadingStreak } from '../services/storage';
+import { fetchChapter } from '../services/bibleApi';
 import type { ReadingPosition } from '../services/storage';
 import { SaveButton } from './SaveButton';
 import { useTheme } from './ThemeProvider';
@@ -32,25 +33,48 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDailyVerseSaved, setIsDailyVerseSaved] = useState(false);
   const [completedChapters, setCompletedChapters] = useState<Set<string>>(new Set());
+  const [savedVersesCount, setSavedVersesCount] = useState<number>(0);
+  const [readingStreak, setReadingStreak] = useState<number>(0);
+  const [chapterVerseCount, setChapterVerseCount] = useState<number>(0);
   const chapterGridRef = useRef<HTMLDivElement>(null);
 
   const otBooks = books.filter(b => b.testament === 'OT');
   const ntBooks = books.filter(b => b.testament === 'NT');
   const dailyVerse = getDailyVerse();
 
-  // Carica i capitoli completati quando si apre il bottom sheet o cambia il progresso
+  // Carica i capitoli completati e le statistiche
   const loadProgress = useCallback(() => {
     getCompletedChapters().then(setCompletedChapters);
+    getSavedVersesCount().then(setSavedVersesCount);
+    getReadingStreak().then(setReadingStreak);
   }, []);
 
   useEffect(() => {
-    if (openTestament) loadProgress();
-  }, [openTestament, loadProgress]);
+    loadProgress();
+  }, [loadProgress]);
 
   useEffect(() => {
     window.addEventListener('progress-changed', loadProgress);
-    return () => window.removeEventListener('progress-changed', loadProgress);
+    window.addEventListener('verses-changed', loadProgress);
+    return () => {
+      window.removeEventListener('progress-changed', loadProgress);
+      window.removeEventListener('verses-changed', loadProgress);
+    };
   }, [loadProgress]);
+
+  useEffect(() => {
+    if (readingPosition) {
+      fetchChapter(readingPosition.bookId, readingPosition.chapter).then(res => {
+        if (!res.error && res.verses) {
+          setChapterVerseCount(res.verses.length);
+        }
+      });
+    }
+  }, [readingPosition]);
+
+  const progressPercentage = readingPosition && chapterVerseCount > 0
+    ? Math.min(100, Math.round((readingPosition.verse / chapterVerseCount) * 100))
+    : 0;
 
   const isBookCompleted = (bookId: string): boolean => {
     const book = books.find(b => b.id === bookId);
@@ -222,34 +246,75 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.98 }}
             className="w-full bg-gradient-to-br from-accent via-[#C9A23E] to-[#A07A20] text-white p-6 rounded-3xl shadow-lg hover:shadow-xl transition-shadow duration-300 text-left relative overflow-hidden group"
+            style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
           >
             {/* Decorazione di sfondo */}
             <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-500" />
-            <div className="absolute right-6 top-6 w-16 h-16 bg-white/5 rounded-full" />
+            
+            {readingPosition ? (
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-16 h-16 flex items-center justify-center">
+                <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
+                  {/* Track */}
+                  <path
+                    className="text-white/30"
+                    strokeWidth="3"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845
+                      a 15.9155 15.9155 0 0 1 0 31.831
+                      a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  {/* Progress */}
+                  <motion.path
+                    className="text-white"
+                    strokeWidth="3"
+                    strokeDasharray={`${progressPercentage}, 100`}
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845
+                      a 15.9155 15.9155 0 0 1 0 31.831
+                      a 15.9155 15.9155 0 0 1 0 -31.831"
+                    initial={{ strokeDasharray: '0, 100' }}
+                    animate={{ strokeDasharray: `${progressPercentage}, 100` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-white font-sans text-xs font-bold tracking-tighter">
+                    {progressPercentage}%
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-16 h-16 bg-white/5 rounded-full" />
+            )}
 
-            <div className="relative z-10">
+            <div className="relative z-10 pr-20">
               <div className="flex items-center gap-2 text-white/70 text-xs uppercase tracking-widest font-sans mb-3">
                 <BookOpen className="w-3.5 h-3.5" />
                 {readingPosition ? 'Continua a leggere' : 'Inizia a leggere'}
               </div>
-              <div className="font-serif text-2xl md:text-3xl font-medium mb-1">
+              <div className="font-serif text-2xl md:text-3xl font-medium mb-1 truncate">
                 {readingPosition
                   ? `${books.find(b => b.id === readingPosition.bookId)?.name || '...'}`
                   : 'Genesi'}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-white/60 text-sm font-sans">
+              <div>
+                <span className="text-white/60 text-sm font-sans block truncate">
                   {readingPosition
                     ? `Capitolo ${readingPosition.chapter}, verso ${readingPosition.verse}`
                     : 'Capitolo 1, verso 1'}
                 </span>
-                <ChevronRight className="w-5 h-5 text-white/50 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
           </motion.button>
 
           {/* Verso del Giorno */}
-          <div className="p-5 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.05] dark:from-white/[0.02] dark:to-white/[0.05] relative overflow-hidden group">
+          <div 
+            className="p-5 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.05] dark:from-white/[0.02] dark:to-white/[0.05] relative overflow-hidden group"
+            style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
+          >
             <div className="absolute -left-2 -top-3 text-6xl font-serif text-accent/10 select-none leading-none">
               &ldquo;
             </div>
@@ -269,6 +334,39 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 — {dailyVerse.reference}
               </p>
             </div>
+          </div>
+
+          {/* Statistiche di lettura */}
+          <div className="grid grid-cols-3 gap-3">
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              className="p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.01] to-black/[0.04] dark:from-white/[0.01] dark:to-white/[0.04] flex flex-col items-center justify-center text-center"
+            >
+              <div className="text-2xl mb-1">📖</div>
+              <div className="font-serif text-2xl font-medium text-accent leading-none mb-1">{completedChapters.size}</div>
+              <div className="text-[10px] uppercase tracking-wider opacity-60">Capitoli letti</div>
+            </motion.div>
+            
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              className="p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.01] to-black/[0.04] dark:from-white/[0.01] dark:to-white/[0.04] flex flex-col items-center justify-center text-center"
+            >
+              <div className="text-2xl mb-1">❤️</div>
+              <div className="font-serif text-2xl font-medium text-accent leading-none mb-1">{savedVersesCount}</div>
+              <div className="text-[10px] uppercase tracking-wider opacity-60">Versi salvati</div>
+            </motion.div>
+            
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              className="p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.01] to-black/[0.04] dark:from-white/[0.01] dark:to-white/[0.04] flex flex-col items-center justify-center text-center"
+            >
+              <div className="text-2xl mb-1">🔥</div>
+              <div className="font-serif text-2xl font-medium text-accent leading-none mb-1">{readingStreak}</div>
+              <div className="text-[10px] uppercase tracking-wider opacity-60">Giorni di fila</div>
+            </motion.div>
           </div>
 
           {/* Card Testamento */}

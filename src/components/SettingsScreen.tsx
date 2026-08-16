@@ -6,7 +6,7 @@ import { subscribeToPushNotifications, unsubscribeFromPushNotifications } from '
 import { exportData, importData } from '../utils/backupUtils';
 
 export const SettingsScreen: React.FC = () => {
-  const { themeId, setThemeId, isDarkMode, setIsDarkMode } = useTheme();
+  const { themeId, setThemeId, isDarkMode, setIsDarkMode, fontSize, setFontSize } = useTheme();
   
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notifyTime, setNotifyTime] = useState('08:00');
@@ -219,6 +219,42 @@ export const SettingsScreen: React.FC = () => {
                   </button>
                 );
               })}
+            </div>
+          </section>
+
+          {/* Sezione Dimensione Testo */}
+          <section>
+            <h2 className="text-xs font-sans tracking-widest uppercase text-accent/70 font-medium mb-4">Dimensione Testo</h2>
+            <div className="bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl p-4 flex flex-col gap-4">
+              
+              <div className="flex items-center gap-4 px-2">
+                <span className="font-serif text-sm font-medium opacity-50">A</span>
+                <input
+                  type="range"
+                  min="80"
+                  max="150"
+                  step="5"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(parseInt(e.target.value, 10))}
+                  className="flex-1 h-1.5 appearance-none rounded-full outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:bg-accent [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:shadow-md"
+                  style={{
+                    background: `linear-gradient(to right, rgb(var(--color-accent)) ${
+                      ((fontSize - 80) / (150 - 80)) * 100
+                    }%, rgba(128, 128, 128, 0.2) ${((fontSize - 80) / (150 - 80)) * 100}%)`,
+                  }}
+                />
+                <span className="font-serif text-xl font-medium opacity-80">A</span>
+              </div>
+              
+              <div className="mt-2 p-4 bg-white dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/5 flex flex-col items-center justify-center min-h-[120px] shadow-sm dark:shadow-none">
+                <p 
+                  className="font-serif text-center leading-relaxed select-none" 
+                  style={{ fontSize: 'var(--verse-font-size)' }}
+                >
+                  «In principio Dio creò i cieli e la terra.»
+                </p>
+              </div>
+
             </div>
           </section>
 

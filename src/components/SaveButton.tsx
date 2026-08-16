@@ -18,10 +18,14 @@ export const SaveButton: React.FC<SaveButtonProps> = ({ isSaved, onToggle }) => 
       <motion.div
         initial={false}
         animate={{
-          scale: isSaved ? [1, 1.2, 1] : 1,
+          scale: isSaved ? [1, 1.4, 1] : 1,
           color: isSaved ? '#B8912F' : 'currentColor',
         }}
-        transition={{ duration: 0.3 }}
+        transition={{ 
+          duration: 0.35, 
+          ease: "easeOut",
+          times: [0, 0.4, 1]
+        }}
       >
         <Heart 
           className="w-6 h-6" 

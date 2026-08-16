@@ -58,7 +58,7 @@ export const APP_THEMES: AppTheme[] = [
       light: '/themes/theme-cross-light.png',
       dark: '/themes/theme-cross.png'
     },
-    patternOpacity: { light: 0.08, dark: 0.03 },
+    patternOpacity: { light: 0.04, dark: 0.03 },
     texture: {
       light: 'radial-gradient(circle at 30% 70%, rgba(139,105,20,0.04) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(139,105,20,0.03) 0%, transparent 50%)',
       dark: 'radial-gradient(circle at 30% 70%, rgba(232,217,192,0.03) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(232,217,192,0.02) 0%, transparent 50%)',
@@ -79,7 +79,7 @@ export const APP_THEMES: AppTheme[] = [
       light: '200%', // Zoom compensato per pareggiare la versione scura
       dark: '150%'
     },
-    patternOpacity: { light: 0.08, dark: 0.03 },
+    patternOpacity: { light: 0.04, dark: 0.03 },
     texture: {
       light: 'radial-gradient(ellipse at 50% 0%, rgba(108,123,212,0.05) 0%, transparent 60%)',
       dark: 'radial-gradient(ellipse at 50% 0%, rgba(108,123,212,0.04) 0%, transparent 50%), radial-gradient(ellipse at center, transparent 40%, rgba(10,15,30,0.15) 100%)',
@@ -96,7 +96,7 @@ export const APP_THEMES: AppTheme[] = [
       light: '/themes/theme-halo-light.png',
       dark: '/themes/theme-halo.png'
     },
-    patternOpacity: { light: 0.08, dark: 0.03 },
+    patternOpacity: { light: 0.04, dark: 0.03 },
     texture: {
       light: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(107,142,35,0.015) 3px, rgba(107,142,35,0.015) 4px)',
       dark: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(216,222,200,0.02) 3px, rgba(216,222,200,0.02) 4px)',
@@ -113,7 +113,7 @@ export const APP_THEMES: AppTheme[] = [
       light: '/themes/theme-face-light.png',
       dark: '/themes/theme-face.png'
     },
-    patternOpacity: { light: 0.08, dark: 0.03 },
+    patternOpacity: { light: 0.04, dark: 0.03 },
     texture: {
       light: 'linear-gradient(135deg, rgba(184,92,110,0.03) 0%, transparent 50%, rgba(184,92,110,0.02) 100%)',
       dark: 'linear-gradient(135deg, rgba(232,214,218,0.02) 0%, transparent 50%, rgba(232,214,218,0.015) 100%)',
@@ -130,7 +130,7 @@ export const APP_THEMES: AppTheme[] = [
       light: '/themes/theme-dove-light.png',
       dark: '/themes/theme-dove.png'
     },
-    patternOpacity: { light: 0.08, dark: 0.03 },
+    patternOpacity: { light: 0.04, dark: 0.03 },
     texture: {
       light: 'linear-gradient(180deg, rgba(74,144,217,0.04) 0%, transparent 40%, rgba(74,144,217,0.02) 100%)',
       dark: 'linear-gradient(180deg, rgba(74,144,217,0.03) 0%, transparent 40%, rgba(74,144,217,0.02) 100%)',
