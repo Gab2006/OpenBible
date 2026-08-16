@@ -44,3 +44,15 @@ html, body, #root {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Stile per l'elemento attivamente trascinato */
+.dragging {
+  scale: 1.05;
+  box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -5px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  opacity: 0.95;
+  cursor: grabbing;
+}
+.dark .dragging {
+  box-shadow: 0 15px 30px -5px rgba(255, 255, 255, 0.05), 0 8px 10px -5px rgba(255, 255, 255, 0.02);
+}

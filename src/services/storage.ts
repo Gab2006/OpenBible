@@ -1,5 +1,6 @@
 import { openDB } from 'idb';
 import type { DBSchema, IDBPDatabase } from 'idb';
+import type { HomeCardId, StatCardId } from '../types/homeLayoutTypes';
 
 export interface Verse {
   bookId: string;
@@ -42,13 +43,21 @@ interface BibleDB extends DBSchema {
     key: string;
     value: { date: string; timestamp: number };
   };
+  home_layout: {
+    key: string;
+    value: HomeCardId[];
+  };
+  stats_layout: {
+    key: string;
+    value: StatCardId[];
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<BibleDB>>;
 
 export function initDB() {
   if (!dbPromise) {
-    dbPromise = openDB<BibleDB>('BibleReaderDB', 4, {
+    dbPromise = openDB<BibleDB>('BibleReaderDB', 5, {
       upgrade(db, oldVersion, _newVersion, transaction) {
         if (!db.objectStoreNames.contains('reading_progress')) {
           db.createObjectStore('reading_progress');
@@ -65,6 +74,12 @@ export function initDB() {
         }
         if (!db.objectStoreNames.contains('reading_days')) {
           db.createObjectStore('reading_days', { keyPath: 'date' });
+        }
+        if (!db.objectStoreNames.contains('home_layout')) {
+          db.createObjectStore('home_layout');
+        }
+        if (!db.objectStoreNames.contains('stats_layout')) {
+          db.createObjectStore('stats_layout');
         }
 
         // Migrazione da v2 a v3: invalidare cache Diodati
@@ -237,4 +252,24 @@ export async function getReadingStreak(): Promise<number> {
   }
   
   return streak;
+}
+
+export async function saveHomeLayout(order: HomeCardId[]) {
+  const db = await initDB();
+  await db.put('home_layout', order, 'current');
+}
+
+export async function getHomeLayout(): Promise<HomeCardId[] | undefined> {
+  const db = await initDB();
+  return db.get('home_layout', 'current');
+}
+
+export async function saveStatsLayout(order: StatCardId[]) {
+  const db = await initDB();
+  await db.put('stats_layout', order, 'current');
+}
+
+export async function getStatsLayout(): Promise<StatCardId[] | undefined> {
+  const db = await initDB();
+  return db.get('stats_layout', 'current');
 }

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, BookOpen, X, Check } from 'lucide-react';
+import { ChevronRight, BookOpen, X, Check, RotateCcw } from 'lucide-react';
 import { books } from '../data/books';
 import { getDailyVerse } from '../data/dailyVerses';
 import { isVerseSaved, saveVerse, removeSavedVerse, getCompletedChapters, getSavedVersesCount, getReadingStreak } from '../services/storage';
@@ -8,6 +8,11 @@ import { fetchChapter } from '../services/bibleApi';
 import type { ReadingPosition } from '../services/storage';
 import { SaveButton } from './SaveButton';
 import { useTheme } from './ThemeProvider';
+import { useHomeLayout } from '../hooks/useHomeLayout';
+import { ReorderableHome } from './ReorderableHome';
+import { ReorderableStats } from './ReorderableStats';
+
+import type { HomeCardId, StatCardId } from '../types/homeLayoutTypes';
 
 interface HomeScreenProps {
   readingPosition: ReadingPosition | undefined;
@@ -28,6 +33,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSelectChapter
 }) => {
   const { theme } = useTheme();
+  const {
+    isLoaded,
+    isReordering,
+    enterReorderMode,
+    exitReorderMode,
+    resetOrder,
+    homeOrder,
+    setHomeOrder,
+    statsOrder,
+    setStatsOrder
+  } = useHomeLayout();
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [openTestament, setOpenTestament] = useState<'OT' | 'NT' | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -37,6 +53,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [readingStreak, setReadingStreak] = useState<number>(0);
   const [chapterVerseCount, setChapterVerseCount] = useState<number>(0);
   const chapterGridRef = useRef<HTMLDivElement>(null);
+  const [resetRotation, setResetRotation] = useState(0);
+
+  const handleReset = () => {
+    setResetRotation(r => r - 360);
+    resetOrder();
+  };
 
   const otBooks = books.filter(b => b.testament === 'OT');
   const ntBooks = books.filter(b => b.testament === 'NT');
@@ -111,6 +133,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       chapterGridRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [selectedBook]);
+
+  // Gestione avanzata dello scroll su iOS durante il reordering
+  useEffect(() => {
+    if (!isReordering) return;
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      // Se stiamo toccando una card riordinabile, preveniamo lo scroll nativo
+      if ((e.target as HTMLElement).closest('[data-reorderable="true"]')) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      }
+    };
+    
+    // capture: true garantisce che l'evento venga intercettato prima che Safari lo usi per scorrere
+    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
+    return () => document.removeEventListener('touchmove', handleTouchMove, { capture: true } as any);
+  }, [isReordering]);
 
   const renderBookList = (list: typeof books) => (
     <motion.div
@@ -219,42 +259,69 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     }
   };
 
-  return (
-    <div className="h-full text-light-text dark:text-dark-text relative overflow-hidden">
-      {/* Immagine di sfondo decorativa (solo per il tema classico) */}
-      {theme.id === 'classic' && (
-        <div className="absolute inset-0 pointer-events-none opacity-[0.04] dark:opacity-[0.03] bg-[url('/nobg-icon.png')] bg-no-repeat bg-center bg-[length:150%] md:bg-[length:80%]" />
-      )}
-      
-      <div className="absolute inset-0 overflow-y-auto">
-        <div className="p-6 md:p-12 pb-[calc(7rem+env(safe-area-inset-bottom))] relative z-10">
-        {/* Saluto dinamico */}
-        <header className="mb-8 pt-[max(0.5rem,env(safe-area-inset-top))]">
-          <p className="text-sm font-sans tracking-wider uppercase text-light-text/50 dark:text-dark-text/50 mb-1">
-            {getGreeting()}
-          </p>
-          <h1 className="font-serif text-3xl md:text-4xl font-medium tracking-tight leading-tight">
-            Cosa leggerai<br />oggi?
-          </h1>
-        </header>
+  if (!isLoaded) return null;
 
-        <main className="max-w-2xl mx-auto space-y-6">
+  const renderStatCard = (id: StatCardId) => {
+    switch (id) {
+      case 'chapters':
+        return (
+          <motion.div
+            animate={{ scale: isReordering ? 1.02 : 1 }}
+            whileHover={!isReordering ? { scale: 1.02 } : undefined}
+            whileTap={!isReordering ? { scale: 0.98 } : undefined}
+            className="p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.01] to-black/[0.04] dark:from-white/[0.01] dark:to-white/[0.04] flex flex-col items-center justify-center text-center h-full w-full"
+          >
+            <div className="text-2xl mb-1">📖</div>
+            <div className="font-serif text-2xl font-medium text-accent leading-none mb-1">{completedChapters.size}</div>
+            <div className="text-[10px] uppercase tracking-wider opacity-60">Capitoli letti</div>
+          </motion.div>
+        );
+      case 'saved':
+        return (
+          <motion.div
+            animate={{ scale: isReordering ? 1.02 : 1 }}
+            whileHover={!isReordering ? { scale: 1.02 } : undefined}
+            whileTap={!isReordering ? { scale: 0.98 } : undefined}
+            className="p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.01] to-black/[0.04] dark:from-white/[0.01] dark:to-white/[0.04] flex flex-col items-center justify-center text-center h-full w-full"
+          >
+            <div className="text-2xl mb-1">❤️</div>
+            <div className="font-serif text-2xl font-medium text-accent leading-none mb-1">{savedVersesCount}</div>
+            <div className="text-[10px] uppercase tracking-wider opacity-60">Versi salvati</div>
+          </motion.div>
+        );
+      case 'streak':
+        return (
+          <motion.div
+            animate={{ scale: isReordering ? 1.02 : 1 }}
+            whileHover={!isReordering ? { scale: 1.02 } : undefined}
+            whileTap={!isReordering ? { scale: 0.98 } : undefined}
+            className="p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.01] to-black/[0.04] dark:from-white/[0.01] dark:to-white/[0.04] flex flex-col items-center justify-center text-center h-full w-full"
+          >
+            <div className="text-2xl mb-1">🔥</div>
+            <div className="font-serif text-2xl font-medium text-accent leading-none mb-1">{readingStreak}</div>
+            <div className="text-[10px] uppercase tracking-wider opacity-60">Giorni di fila</div>
+          </motion.div>
+        );
+    }
+  };
 
-          {/* Hero Card — Continua a Leggere */}
+  const renderHomeCard = (id: HomeCardId) => {
+    switch (id) {
+      case 'continue-reading':
+        return (
           <motion.button
-            onClick={onContinue}
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.98 }}
+            onClick={isReordering ? undefined : onContinue}
+            animate={{ scale: isReordering ? 1.02 : 1 }}
+            whileHover={!isReordering ? { scale: 1.02 } : undefined}
+            whileTap={!isReordering ? { scale: 0.98 } : undefined}
             className="w-full bg-gradient-to-br from-accent via-[#C9A23E] to-[#A07A20] text-white p-6 rounded-3xl shadow-lg hover:shadow-xl transition-shadow duration-300 text-left relative overflow-hidden group"
             style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
           >
-            {/* Decorazione di sfondo */}
             <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-500" />
             
             {readingPosition ? (
               <div className="absolute right-6 top-1/2 -translate-y-1/2 w-16 h-16 flex items-center justify-center">
                 <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
-                  {/* Track */}
                   <path
                     className="text-white/30"
                     strokeWidth="3"
@@ -264,7 +331,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       a 15.9155 15.9155 0 0 1 0 31.831
                       a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
-                  {/* Progress */}
                   <motion.path
                     className="text-white"
                     strokeWidth="3"
@@ -309,21 +375,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </div>
             </div>
           </motion.button>
-
-          {/* Verso del Giorno */}
-          <div 
-            className="p-5 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.05] dark:from-white/[0.02] dark:to-white/[0.05] relative overflow-hidden group"
+        );
+      case 'daily-verse':
+        return (
+          <motion.div 
+            animate={{ scale: isReordering ? 1.02 : 1 }}
+            whileHover={!isReordering ? { scale: 1.02 } : undefined}
+            whileTap={!isReordering ? { scale: 0.98 } : undefined}
+            className="p-5 rounded-3xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.05] dark:from-white/[0.02] dark:to-white/[0.05] relative overflow-hidden group"
             style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
           >
             <div className="absolute -left-2 -top-3 text-6xl font-serif text-accent/10 select-none leading-none">
               &ldquo;
             </div>
             
-            <div className="absolute bottom-2 right-2 z-20">
-              <SaveButton isSaved={isDailyVerseSaved} onToggle={toggleDailyVerseSave} />
+            <div className="absolute bottom-2 right-2 z-20" onClick={isReordering ? (e) => e.stopPropagation() : undefined}>
+              <SaveButton isSaved={isDailyVerseSaved} onToggle={isReordering ? () => {} : toggleDailyVerseSave} />
             </div>
 
-            <div className="relative z-10 pr-8">
+            <div className="relative z-10 pr-8 pointer-events-none">
               <p className="text-xs uppercase tracking-widest text-accent font-sans font-medium mb-3">
                 Ispirazione Giornaliera
               </p>
@@ -334,75 +404,111 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 — {dailyVerse.reference}
               </p>
             </div>
-          </div>
-
-          {/* Statistiche di lettura */}
-          <div className="grid grid-cols-3 gap-3">
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              className="p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.01] to-black/[0.04] dark:from-white/[0.01] dark:to-white/[0.04] flex flex-col items-center justify-center text-center"
-            >
-              <div className="text-2xl mb-1">📖</div>
-              <div className="font-serif text-2xl font-medium text-accent leading-none mb-1">{completedChapters.size}</div>
-              <div className="text-[10px] uppercase tracking-wider opacity-60">Capitoli letti</div>
-            </motion.div>
-            
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              className="p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.01] to-black/[0.04] dark:from-white/[0.01] dark:to-white/[0.04] flex flex-col items-center justify-center text-center"
-            >
-              <div className="text-2xl mb-1">❤️</div>
-              <div className="font-serif text-2xl font-medium text-accent leading-none mb-1">{savedVersesCount}</div>
-              <div className="text-[10px] uppercase tracking-wider opacity-60">Versi salvati</div>
-            </motion.div>
-            
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              className="p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.01] to-black/[0.04] dark:from-white/[0.01] dark:to-white/[0.04] flex flex-col items-center justify-center text-center"
-            >
-              <div className="text-2xl mb-1">🔥</div>
-              <div className="font-serif text-2xl font-medium text-accent leading-none mb-1">{readingStreak}</div>
-              <div className="text-[10px] uppercase tracking-wider opacity-60">Giorni di fila</div>
-            </motion.div>
-          </div>
-
-          {/* Card Testamento */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleTestamentClick('OT')}
-              className="p-5 rounded-2xl text-left border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.06] dark:from-white/[0.02] dark:to-white/[0.06] hover:border-accent/30 hover:shadow-sm transition-all duration-300 group"
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">📜</span>
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-serif text-xl font-medium text-accent mb-0.5">Antico Testamento</h2>
-                  <p className="text-sm opacity-50">39 libri · Da Genesi a Malachia</p>
-                </div>
-                <ChevronRight className="w-5 h-5 opacity-30 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all mt-1 shrink-0" />
+          </motion.div>
+        );
+      case 'stats':
+        return (
+          <ReorderableStats
+            order={statsOrder}
+            setOrder={setStatsOrder}
+            isReordering={isReordering}
+            onEnterReorderMode={enterReorderMode}
+            renderCard={renderStatCard}
+          />
+        );
+      case 'testament-ot':
+        return (
+          <motion.button
+            animate={{ scale: isReordering ? 1.02 : 1 }}
+            whileHover={!isReordering ? { scale: 1.02 } : undefined}
+            whileTap={!isReordering ? { scale: 0.98 } : undefined}
+            onClick={isReordering ? undefined : () => handleTestamentClick('OT')}
+            className="w-full p-5 rounded-2xl text-left border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.06] dark:from-white/[0.02] dark:to-white/[0.06] hover:border-accent/30 hover:shadow-sm transition-all duration-300 group"
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">📜</span>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-serif text-xl font-medium text-accent mb-0.5">Antico Testamento</h2>
+                <p className="text-sm opacity-50">39 libri · Da Genesi a Malachia</p>
               </div>
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleTestamentClick('NT')}
-              className="p-5 rounded-2xl text-left border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.06] dark:from-white/[0.02] dark:to-white/[0.06] hover:border-accent/30 hover:shadow-sm transition-all duration-300 group"
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">✝️</span>
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-serif text-xl font-medium text-accent mb-0.5">Nuovo Testamento</h2>
-                  <p className="text-sm opacity-50">27 libri · Da Matteo ad Apocalisse</p>
-                </div>
-                <ChevronRight className="w-5 h-5 opacity-30 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all mt-1 shrink-0" />
+              <ChevronRight className="w-5 h-5 opacity-30 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all mt-1 shrink-0" />
+            </div>
+          </motion.button>
+        );
+      case 'testament-nt':
+        return (
+          <motion.button
+            animate={{ scale: isReordering ? 1.02 : 1 }}
+            whileHover={!isReordering ? { scale: 1.02 } : undefined}
+            whileTap={!isReordering ? { scale: 0.98 } : undefined}
+            onClick={isReordering ? undefined : () => handleTestamentClick('NT')}
+            className="w-full p-5 rounded-2xl text-left border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.06] dark:from-white/[0.02] dark:to-white/[0.06] hover:border-accent/30 hover:shadow-sm transition-all duration-300 group"
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">✝️</span>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-serif text-xl font-medium text-accent mb-0.5">Nuovo Testamento</h2>
+                <p className="text-sm opacity-50">27 libri · Da Matteo ad Apocalisse</p>
               </div>
-            </motion.button>
+              <ChevronRight className="w-5 h-5 opacity-30 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all mt-1 shrink-0" />
+            </div>
+          </motion.button>
+        );
+    }
+  };
+
+  return (
+    <div className="h-full text-light-text dark:text-dark-text relative overflow-hidden">
+      {/* Immagine di sfondo decorativa (solo per il tema classico) */}
+      {theme.id === 'classic' && (
+        <div className="absolute inset-0 pointer-events-none opacity-[0.04] dark:opacity-[0.03] bg-[url('/nobg-icon.png')] bg-no-repeat bg-center bg-[length:150%] md:bg-[length:80%]" />
+      )}
+      
+      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
+        <div className="p-6 md:p-12 pb-[calc(7rem+env(safe-area-inset-bottom))] relative z-10">
+        {/* Saluto dinamico e Header */}
+        <header className="mb-8 pt-[max(0.5rem,env(safe-area-inset-top))] flex justify-between items-start">
+          <div>
+            <p className="text-sm font-sans tracking-wider uppercase text-light-text/50 dark:text-dark-text/50 mb-1 select-none">
+              {getGreeting()}
+            </p>
+            <h1 className="font-serif text-3xl md:text-4xl font-medium tracking-tight leading-tight select-none">
+              Cosa leggerai<br />oggi?
+            </h1>
           </div>
+          <AnimatePresence>
+            {isReordering && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="flex flex-row gap-3 items-center mt-2"
+              >
+                <motion.button 
+                  onClick={handleReset} 
+                  animate={{ rotate: resetRotation }}
+                  transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1] }}
+                  title="Ripristina layout predefinito"
+                  className="p-2 text-accent/70 hover:text-accent bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-full z-50 transition-colors"
+                >
+                  <RotateCcw size={18} strokeWidth={2.5} />
+                </motion.button>
+                <button onClick={exitReorderMode} className="bg-accent text-white px-5 py-2 rounded-full font-medium text-sm shadow-md active:scale-95 transition-transform hover:shadow-lg z-50 select-none">
+                  Fatto
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </header>
+
+        <main className="max-w-2xl mx-auto">
+          <ReorderableHome 
+            order={homeOrder} 
+            setOrder={setHomeOrder} 
+            isReordering={isReordering} 
+            onEnterReorderMode={enterReorderMode}
+            renderCard={renderHomeCard}
+          />
         </main>
       </div>
       </div>
