@@ -140,7 +140,7 @@ export const SettingsScreen: React.FC = () => {
               
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl ${notificationsEnabled ? 'bg-accent/10 text-accent' : 'bg-black/5 dark:bg-white/5 text-light-text/40 dark:text-dark-text/40'}`}>
+                  <div className={`p-2 rounded-xl ${notificationsEnabled ? 'bg-accent/10 text-accent' : 'bg-black/5 dark:bg-white/5 text-light-text dark:text-dark-text [&>svg]:opacity-40'}`}>
                     {notificationsEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
                   </div>
                   <div>
@@ -186,14 +186,14 @@ export const SettingsScreen: React.FC = () => {
             <div className="bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl p-2 flex gap-2">
               <button
                 onClick={() => setIsDarkMode(false)}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm ${!isDarkMode ? 'bg-white dark:bg-black/60 shadow-sm text-accent' : 'hover:bg-black/5 dark:hover:bg-white/5 text-light-text/60 dark:text-dark-text/60'}`}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm ${!isDarkMode ? 'bg-white dark:bg-black/60 shadow-sm text-accent' : 'hover:bg-black/5 dark:hover:bg-white/5 text-light-text dark:text-dark-text [&>svg]:opacity-60 [&>span]:opacity-60'}`}
               >
                 <Sun className="w-4 h-4" />
                 <span className="font-medium">Chiaro</span>
               </button>
               <button
                 onClick={() => setIsDarkMode(true)}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm ${isDarkMode ? 'bg-white dark:bg-black/60 shadow-sm text-accent' : 'hover:bg-black/5 dark:hover:bg-white/5 text-light-text/60 dark:text-dark-text/60'}`}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm ${isDarkMode ? 'bg-white dark:bg-black/60 shadow-sm text-accent' : 'hover:bg-black/5 dark:hover:bg-white/5 text-light-text dark:text-dark-text [&>svg]:opacity-60 [&>span]:opacity-60'}`}
               >
                 <Moon className="w-4 h-4" />
                 <span className="font-medium">Scuro</span>
@@ -212,7 +212,7 @@ export const SettingsScreen: React.FC = () => {
                   <button
                     key={t.id}
                     onClick={() => setThemeId(t.id)}
-                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm ${isActive ? 'bg-white dark:bg-black/60 shadow-sm text-accent' : 'hover:bg-black/5 dark:hover:bg-white/5 text-light-text/60 dark:text-dark-text/60'}`}
+                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm ${isActive ? 'bg-white dark:bg-black/60 shadow-sm text-accent' : 'hover:bg-black/5 dark:hover:bg-white/5 text-light-text dark:text-dark-text [&>span]:opacity-60'}`}
                   >
                     <span className="text-base">{t.emoji}</span>
                     <span className="font-medium">{t.name}</span>
@@ -264,7 +264,7 @@ export const SettingsScreen: React.FC = () => {
             <div className="bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl p-2 flex flex-col gap-2">
               <button
                 onClick={handleExportData}
-                className="flex w-full items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm hover:bg-black/5 dark:hover:bg-white/5 text-light-text/80 dark:text-dark-text/80"
+                className="flex w-full items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm hover:bg-black/5 dark:hover:bg-white/5 text-light-text dark:text-dark-text [&>svg]:opacity-80 [&>span]:opacity-80"
               >
                 <Download className="w-4 h-4" />
                 <span className="font-medium">Esporta Backup Dati</span>
@@ -273,7 +273,7 @@ export const SettingsScreen: React.FC = () => {
               <button
                 onClick={handleImportClick}
                 disabled={isImporting}
-                className="flex w-full items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm hover:bg-black/5 dark:hover:bg-white/5 text-light-text/80 dark:text-dark-text/80 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm hover:bg-black/5 dark:hover:bg-white/5 text-light-text dark:text-dark-text [&>svg]:opacity-80 [&>span]:opacity-80 disabled:opacity-50"
               >
                 {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 <span className="font-medium">Ripristina da Backup</span>

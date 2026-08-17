@@ -357,7 +357,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             )}
 
             <div className="relative z-10 pr-20">
-              <div className="flex items-center gap-2 text-white/70 text-xs uppercase tracking-widest font-sans mb-3">
+              <div className="flex items-center gap-2 text-white opacity-70 text-xs uppercase tracking-widest font-sans mb-3">
                 <BookOpen className="w-3.5 h-3.5" />
                 {readingPosition ? 'Continua a leggere' : 'Inizia a leggere'}
               </div>
@@ -489,7 +489,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   animate={{ rotate: resetRotation }}
                   transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1] }}
                   title="Ripristina layout predefinito"
-                  className="p-2 text-accent/70 hover:text-accent bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-full z-50 transition-colors"
+                  className="p-2 text-accent [&>svg]:opacity-70 hover:[&>svg]:opacity-100 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-full z-50 transition-colors [&>svg]:transition-opacity"
                 >
                   <RotateCcw size={18} strokeWidth={2.5} />
                 </motion.button>

@@ -97,7 +97,7 @@ const SavedVerseCard: React.FC<{
             </span>
             <button
               onClick={(e) => { e.stopPropagation(); onRemove(); }}
-              className="p-2 text-red-400/60 hover:text-red-500 active:text-red-600 transition-colors rounded-full hover:bg-red-500/10"
+              className="p-2 text-red-400 [&>svg]:opacity-60 hover:[&>svg]:opacity-100 hover:text-red-500 active:text-red-600 transition-all rounded-full hover:bg-red-500/10"
               aria-label="Rimuovi"
             >
               <Trash2 className="w-4 h-4" />
@@ -184,7 +184,7 @@ export const SavedVersesScreen: React.FC<SavedVersesScreenProps> = ({ onBack, on
               {/* Search Bar */}
               <div className="relative flex items-center bg-black/5 dark:bg-white/5 rounded-xl backdrop-blur-sm focus-within:ring-2 focus-within:ring-accent/50 transition-all">
                 <div className="pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-light-text/40 dark:text-dark-text/40" />
+                  <Search className="h-5 w-5 text-light-text dark:text-dark-text opacity-40" />
                 </div>
                 <input
                   type="text"
@@ -196,7 +196,7 @@ export const SavedVersesScreen: React.FC<SavedVersesScreenProps> = ({ onBack, on
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="absolute right-0 pr-3 flex items-center text-light-text/40 hover:text-light-text dark:text-dark-text/40 dark:hover:text-dark-text"
+                    className="absolute right-0 pr-3 flex items-center text-light-text dark:text-dark-text [&>svg]:opacity-40 hover:[&>svg]:opacity-100 transition-opacity"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -286,7 +286,7 @@ export const SavedVersesScreen: React.FC<SavedVersesScreenProps> = ({ onBack, on
                 className="flex flex-col items-center justify-center py-20 text-center"
               >
                 <div className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center mb-6">
-                  <Heart className="w-10 h-10 text-accent/40" />
+                  <Heart className="w-10 h-10 text-accent opacity-40" />
                 </div>
                 <p className="font-serif text-lg mb-2 opacity-60">
                   Nessun verso salvato ancora

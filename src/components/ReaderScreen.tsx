@@ -257,7 +257,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
             ) : currentVerse ? (
               <>
                 <p 
-                  className="font-serif text-center leading-relaxed max-w-2xl select-none"
+                  className="font-serif text-center leading-relaxed max-w-2xl select-text"
                   style={{ fontSize: 'var(--verse-font-size)' }}
                 >
                   {currentVerse.text}
