@@ -1,43 +1,45 @@
 import type { Verse } from './storage';
 import { getBookById } from '../data/books';
 
+import type { Translation } from '../types';
+
 type BibleData = Record<string, Record<string, Array<{ verse: number; text: string }>>>;
 
-let cachedBibleData: BibleData | null = null;
-let fetchPromise: Promise<BibleData | null> | null = null;
+let cachedBibleData: Record<Translation, BibleData | null> = { cei: null, tilc: null };
+let fetchPromise: Record<Translation, Promise<BibleData | null> | null> = { cei: null, tilc: null };
 
 /**
- * Carica il file locale /bible.json in memoria RAM una sola volta.
+ * Carica il file locale /bible_{translation}.json in memoria RAM una sola volta.
  */
-async function loadBibleData(): Promise<BibleData | null> {
-  if (cachedBibleData) return cachedBibleData;
-  if (fetchPromise) return fetchPromise;
+async function loadBibleData(translation: Translation = 'cei'): Promise<BibleData | null> {
+  if (cachedBibleData[translation]) return cachedBibleData[translation];
+  if (fetchPromise[translation]) return fetchPromise[translation];
 
-  fetchPromise = (async () => {
+  fetchPromise[translation] = (async () => {
     try {
-      const response = await fetch('/bible.json');
+      const response = await fetch(`/bible_${translation}.json`);
       if (!response.ok) {
         throw new Error(`Impossibile caricare il file locale (${response.status})`);
       }
       const data: BibleData = await response.json();
-      cachedBibleData = data;
+      cachedBibleData[translation] = data;
       return data;
     } catch (err) {
       console.error('Errore nel caricamento della Bibbia locale:', err);
       return null;
     } finally {
-      fetchPromise = null;
+      fetchPromise[translation] = null;
     }
   })();
 
-  return fetchPromise;
+  return fetchPromise[translation];
 }
 
 /**
  * Restituisce i versetti del capitolo richiesto dal file locale.
  */
-export async function fetchChapter(bookId: string, chapter: number): Promise<{ verses: Verse[], error: string | null }> {
-  const bible = await loadBibleData();
+export async function fetchChapter(bookId: string, chapter: number, translation: Translation = 'cei'): Promise<{ verses: Verse[], error: string | null }> {
+  const bible = await loadBibleData(translation);
   if (!bible) {
     return { verses: [], error: 'Scaricamento della Bibbia CEI in corso... Attendi un istante e riprova.' };
   }
@@ -64,8 +66,8 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<{ v
 /**
  * Recupera un singolo versetto dal file locale.
  */
-export async function fetchSingleVerse(bookId: string, chapter: number, verseNum: number): Promise<string | null> {
-  const { verses } = await fetchChapter(bookId, chapter);
+export async function fetchSingleVerse(bookId: string, chapter: number, verseNum: number, translation: Translation = 'cei'): Promise<string | null> {
+  const { verses } = await fetchChapter(bookId, chapter, translation);
   const found = verses.find(v => v.verse === verseNum);
   return found ? found.text : null;
 }

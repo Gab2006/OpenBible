@@ -84,11 +84,12 @@ export default function App() {
       try {
         await initDB();
         const pos = await getReadingPosition();
+        const initialTranslation = (localStorage.getItem('translation') as 'cei' | 'tilc') || 'cei';
         if (pos) {
           setReadingPosition(pos);
-          await fetchChapter(pos.bookId, pos.chapter);
+          await fetchChapter(pos.bookId, pos.chapter, initialTranslation);
         } else {
-          await fetchChapter('GEN', 1);
+          await fetchChapter('GEN', 1, initialTranslation);
         }
       } catch (error) {
         console.error("Initialization error:", error);
@@ -140,7 +141,7 @@ export default function App() {
     const randomBook = books[Math.floor(Math.random() * books.length)];
     const randomChapter = Math.floor(Math.random() * randomBook.chapters) + 1;
     
-    const { verses } = await fetchChapter(randomBook.id, randomChapter);
+    const { verses } = await fetchChapter(randomBook.id, randomChapter, (localStorage.getItem('translation') as 'cei' | 'tilc') || 'cei');
     const randomVerse = verses.length > 0 
       ? verses[Math.floor(Math.random() * verses.length)].verse 
       : 1;

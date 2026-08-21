@@ -1,8 +1,9 @@
-/** Canali RGB separati da spazio, es. "250 246 239" — per Tailwind <alpha-value> */
 export interface ThemeColors {
   bg: string;
   text: string;
 }
+
+export type Translation = 'cei' | 'tilc';
 
 export interface AppTheme {
   id: string;

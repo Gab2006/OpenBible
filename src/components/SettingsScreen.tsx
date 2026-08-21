@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Bell, BellOff, Loader2, Download, Upload } from 'lucide-react';
+import { Moon, Sun, Bell, BellOff, Loader2, Download, Upload, Book, BookOpen } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { APP_THEMES } from '../types';
 import { subscribeToPushNotifications, unsubscribeFromPushNotifications } from '../services/push';
 import { exportData, importData } from '../utils/backupUtils';
 
 export const SettingsScreen: React.FC = () => {
-  const { themeId, setThemeId, isDarkMode, setIsDarkMode, fontSize, setFontSize } = useTheme();
+  const { themeId, setThemeId, isDarkMode, setIsDarkMode, fontSize, setFontSize, translation, setTranslation } = useTheme();
   
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notifyTime, setNotifyTime] = useState('08:00');
@@ -199,6 +199,30 @@ export const SettingsScreen: React.FC = () => {
                 <span className="font-medium">Scuro</span>
               </button>
             </div>
+          </section>
+
+          {/* Sezione Traduzione */}
+          <section>
+            <h2 className="text-xs font-sans tracking-widest uppercase text-accent/70 font-medium mb-4">Traduzione</h2>
+            <div className="bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl p-2 flex gap-2">
+              <button
+                onClick={() => setTranslation('cei')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm ${translation === 'cei' ? 'bg-white dark:bg-black/60 shadow-sm text-accent' : 'hover:bg-black/5 dark:hover:bg-white/5 text-light-text dark:text-dark-text [&>svg]:opacity-60 [&>span]:opacity-60'}`}
+              >
+                <Book className="w-4 h-4" />
+                <span className="font-medium">CEI 2008</span>
+              </button>
+              <button
+                onClick={() => setTranslation('tilc')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all font-sans text-sm ${translation === 'tilc' ? 'bg-white dark:bg-black/60 shadow-sm text-accent' : 'hover:bg-black/5 dark:hover:bg-white/5 text-light-text dark:text-dark-text [&>svg]:opacity-60 [&>span]:opacity-60'}`}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span className="font-medium">TILC</span>
+              </button>
+            </div>
+            <p className="text-xs text-light-text/50 dark:text-dark-text/50 mt-3 text-center px-4">
+              La <strong>CEI 2008</strong> è la traduzione ufficiale, più formale. La <strong>TILC</strong> (in lingua corrente) è più semplice e immediata da leggere.
+            </p>
           </section>
 
           {/* Sezione Tema */}

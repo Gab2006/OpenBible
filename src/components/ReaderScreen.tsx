@@ -6,6 +6,7 @@ import { isVerseSaved, saveVerse, removeSavedVerse, markChapterCompleted } from 
 import type { Verse } from '../services/storage';
 import { SaveButton } from './SaveButton';
 import { ShareButton } from './ShareButton';
+import { useTheme } from './ThemeProvider';
 import { books } from '../data/books';
 import { fetchChapter, prefetchNextChapter } from '../services/bibleApi';
 
@@ -35,6 +36,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [direction, setDirection] = useState(0);
   const [showChapterComplete, setShowChapterComplete] = useState(false);
+  const { translation, setTranslation } = useTheme();
 
   // Keep local state in sync with initial props when they change externally (e.g. hash routing)
   useEffect(() => {
@@ -49,7 +51,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
     const load = async () => {
       setIsLoading(true);
       setError(null);
-      const { verses: chapterVerses, error: fetchError } = await fetchChapter(currentBookId, currentChapter);
+      const { verses: chapterVerses, error: fetchError } = await fetchChapter(currentBookId, currentChapter, translation);
       if (active) {
         setVerses(chapterVerses);
         setError(fetchError);
@@ -57,13 +59,14 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
 
         // Se abbiamo caricato con successo il capitolo corrente, scateniamo il prefetch di quello successivo
         if (!fetchError && chapterVerses.length > 0) {
+          // prefetchNextChapter non necessita di translation ma è safe da chiamare
           prefetchNextChapter(currentBookId, currentChapter);
         }
       }
     };
     load();
     return () => { active = false; };
-  }, [currentBookId, currentChapter]);
+  }, [currentBookId, currentChapter, translation]);
 
   // Check if current verse is saved + persist position only in reading mode
   useEffect(() => {
@@ -161,19 +164,22 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
 
   const variants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? window.innerWidth : -window.innerWidth,
+      x: direction === 0 ? 0 : (direction > 0 ? window.innerWidth : -window.innerWidth),
       opacity: 0,
+      filter: direction === 0 ? 'blur(8px)' : 'blur(0px)',
       zIndex: 1,
     }),
     center: {
       zIndex: 1,
       x: 0,
       opacity: 1,
+      filter: 'blur(0px)',
     },
     exit: (direction: number) => ({
       zIndex: 0,
-      x: direction < 0 ? window.innerWidth : -window.innerWidth,
+      x: direction === 0 ? 0 : (direction < 0 ? window.innerWidth : -window.innerWidth),
       opacity: 0,
+      filter: direction === 0 ? 'blur(8px)' : 'blur(0px)',
     }),
   };
 
@@ -191,10 +197,21 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
 
       {/* Header informativo */}
       <div className="relative z-10 flex items-center justify-between px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
-        <div className="text-xs font-sans tracking-widest uppercase text-light-text/40 dark:text-dark-text/40">
+        <div className="text-xs font-sans tracking-widest uppercase text-light-text/40 dark:text-dark-text/40 w-1/3">
           {bookMeta?.name} · Capitolo {currentChapter}
         </div>
-        <div className="text-xs font-sans text-light-text/30 dark:text-dark-text/30">
+        
+        <button 
+          onClick={() => {
+            setDirection(0);
+            setTranslation(translation === 'cei' ? 'tilc' : 'cei');
+          }}
+          className="px-3 py-1 bg-black/5 dark:bg-white/5 rounded-full text-xs font-sans font-medium text-light-text/60 dark:text-dark-text/60 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+        >
+          {translation === 'cei' ? 'CEI 2008' : 'TILC'}
+        </button>
+
+        <div className="text-xs font-sans text-light-text/30 dark:text-dark-text/30 w-1/3 text-right">
           {currentVerseNum}/{verses.length || '…'}
         </div>
       </div>
@@ -210,7 +227,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
 
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
-            key={`${currentBookId}-${currentChapter}-${currentVerseNum}`}
+            key={`${currentBookId}-${currentChapter}-${currentVerseNum}-${translation}`}
             custom={direction}
             variants={variants}
             initial="enter"
@@ -218,7 +235,8 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
             exit="exit"
             transition={{
               x: { type: "spring", stiffness: 300, damping: 30 },
-              opacity: { duration: 0.2 },
+              opacity: { duration: direction === 0 ? 0.7 : 0.2 },
+              filter: { duration: direction === 0 ? 0.7 : 0.2 },
             }}
             drag
             dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
@@ -243,7 +261,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
                   onClick={() => {
                     setIsLoading(true);
                     setError(null);
-                    fetchChapter(currentBookId, currentChapter).then(({verses: v, error: e}) => {
+                    fetchChapter(currentBookId, currentChapter, translation).then(({verses: v, error: e}) => {
                       setVerses(v);
                       setError(e);
                       setIsLoading(false);

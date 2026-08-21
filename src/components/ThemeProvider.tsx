@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { APP_THEMES } from '../types';
-import type { AppTheme } from '../types';
+import type { AppTheme, Translation } from '../types';
 
 interface ThemeContextValue {
   theme: AppTheme;
@@ -11,6 +11,8 @@ interface ThemeContextValue {
   setIsDarkMode: (dark: boolean) => void;
   fontSize: number;
   setFontSize: (size: number) => void;
+  translation: Translation;
+  setTranslation: (t: Translation) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -34,6 +36,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem('fontSize');
     return saved ? parseInt(saved, 10) : 100;
   });
+  const [translation, setTranslationState] = useState<Translation>(() => {
+    return (localStorage.getItem('translation') as Translation) || 'cei';
+  });
 
   const theme = APP_THEMES.find(t => t.id === themeId) || APP_THEMES[0];
 
@@ -45,6 +50,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setFontSize = (size: number) => {
     setFontSizeState(size);
     localStorage.setItem('fontSize', size.toString());
+  };
+
+  const setTranslation = (t: Translation) => {
+    setTranslationState(t);
+    localStorage.setItem('translation', t);
   };
 
   // Applica le CSS custom properties per i colori e grandezza font
@@ -129,7 +139,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme, isDarkMode]);
 
   return (
-    <ThemeContext.Provider value={{ theme, themeId, setThemeId, isDarkMode, setIsDarkMode, fontSize, setFontSize }}>
+    <ThemeContext.Provider value={{ theme, themeId, setThemeId, isDarkMode, setIsDarkMode, fontSize, setFontSize, translation, setTranslation }}>
       {children}
     </ThemeContext.Provider>
   );
