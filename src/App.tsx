@@ -10,6 +10,7 @@ import { getReadingPosition, saveReadingPosition, getAllSavedVerses, initDB } fr
 import type { ReadingPosition } from './services/storage';
 import { fetchChapter } from './services/bibleApi';
 import { books } from './data/books';
+import { subscribeToPushNotifications } from './services/push';
 
 type ViewState = 
   | { type: 'home' }
@@ -90,6 +91,17 @@ export default function App() {
           await fetchChapter(pos.bookId, pos.chapter, initialTranslation);
         } else {
           await fetchChapter('GEN', 1, initialTranslation);
+        }
+
+        // Sincronizza la sottoscrizione push con il backend ad ogni avvio (in background)
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          navigator.serviceWorker.ready.then(async (registration) => {
+            const subscription = await registration.pushManager.getSubscription();
+            if (subscription) {
+              const notifyTime = localStorage.getItem('notify_time') || '08:00';
+              subscribeToPushNotifications(notifyTime).catch(e => console.error('Errore sync push:', e));
+            }
+          });
         }
       } catch (error) {
         console.error("Initialization error:", error);
