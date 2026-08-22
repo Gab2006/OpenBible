@@ -12,9 +12,11 @@ import { fetchChapter } from './services/bibleApi';
 import { books } from './data/books';
 import { subscribeToPushNotifications } from './services/push';
 
+type ReaderSource = 'reading' | 'saved' | 'random' | 'notification' | 'linked';
+
 type ViewState = 
   | { type: 'home' }
-  | { type: 'reader', bookId: string, chapter: number, verse: number, source: 'reading' | 'saved' | 'random' | 'notification' }
+  | { type: 'reader', bookId: string, chapter: number, verse: number, source: ReaderSource, returnPosition?: { bookId: string, chapter: number, verse: number, source: ReaderSource } }
   | { type: 'saved' }
   | { type: 'settings' };
 
@@ -32,6 +34,7 @@ export default function App() {
         const [pathPart, queryPart] = hash.split('?');
         const parts = pathPart.split('/');
         const isNotification = queryPart === 'source=notification';
+        const isLinked = queryPart === 'source=linked';
         
         if (parts.length >= 5) {
           const bookId = parts[2];
@@ -40,8 +43,15 @@ export default function App() {
           if (bookId && !isNaN(chapter) && !isNaN(verse)) {
             setView(prev => {
               if (prev.type === 'reader' && prev.bookId === bookId && prev.chapter === chapter && prev.verse === verse) return prev;
-              const source = isNotification ? 'notification' : (prev.type === 'reader' ? prev.source : 'reading');
-              return { type: 'reader', bookId, chapter, verse, source };
+              
+              const source = isNotification ? 'notification' : isLinked ? 'linked' : (prev.type === 'reader' ? prev.source : 'reading');
+              
+              let returnPosition = prev.type === 'reader' && prev.type === 'reader' ? prev.returnPosition : undefined;
+              if (isLinked && prev.type === 'reader' && prev.source !== 'linked') {
+                returnPosition = { bookId: prev.bookId, chapter: prev.chapter, verse: prev.verse, source: prev.source };
+              }
+
+              return { type: 'reader', bookId, chapter, verse, source, returnPosition };
             });
             return;
           }
@@ -207,6 +217,7 @@ export default function App() {
               source={view.source}
               onHome={() => setView({ type: 'home' })}
               onPositionChange={handlePositionChange}
+              onReturn={view.returnPosition ? () => setView({ type: 'reader', ...view.returnPosition! }) : undefined}
             />
           </motion.div>
         )}

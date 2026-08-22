@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Undo2 } from 'lucide-react';
 import { isVerseSaved, saveVerse, removeSavedVerse, markChapterCompleted } from '../services/storage';
 import type { Verse } from '../services/storage';
 import { SaveButton } from './SaveButton';
@@ -10,13 +10,68 @@ import { useTheme } from './ThemeProvider';
 import { books } from '../data/books';
 import { fetchChapter, prefetchNextChapter } from '../services/bibleApi';
 
+const bookNameToId: Record<string, string> = {};
+books.forEach(b => {
+  bookNameToId[b.name.toLowerCase()] = b.id;
+});
+
+const bookNamesPattern = books
+  .map(b => b.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .sort((a, b) => b.length - a.length)
+  .join('|');
+
+const formatVerseText = (text: string, currentBookId: string) => {
+  const parts = text.split(/([([](?:vedi|cfr\.)\s+.*?[)\]])/gi);
+
+  return parts.map((part, index) => {
+    if (/^[([](?:vedi|cfr\.)/i.test(part)) {
+      let lastBookId = currentBookId;
+      const innerParts = [];
+      let lastIndex = 0;
+      
+      const regex = new RegExp(`(?:(${bookNamesPattern})\\s+)?(\\d+)[,:]\\s*(\\d+)(?:-\\d+)?`, 'gi');
+      let match;
+      
+      while ((match = regex.exec(part)) !== null) {
+        innerParts.push(part.substring(lastIndex, match.index));
+        
+        const matchedBookName = match[1];
+        const chapter = match[2];
+        const verse = match[3];
+        
+        if (matchedBookName) {
+          lastBookId = bookNameToId[matchedBookName.toLowerCase()] || currentBookId;
+        }
+        
+        const link = `#/reader/${lastBookId}/${chapter}/${verse}?source=linked`;
+        innerParts.push(
+          <a href={link} key={match.index} className="text-accent underline decoration-accent/30 hover:decoration-accent transition-colors">
+            {match[0]}
+          </a>
+        );
+        lastIndex = match.index + match[0].length;
+      }
+      innerParts.push(part.substring(lastIndex));
+
+      return (
+        <span key={index} className="text-[0.75em] opacity-70 ml-1 inline-block leading-tight">
+          {innerParts}
+        </span>
+      );
+    }
+    
+    return <span key={index}>{part}</span>;
+  });
+};
+
 interface ReaderScreenProps {
   initialBookId: string;
   initialChapter: number;
   initialVerse: number;
-  source: 'reading' | 'saved' | 'random' | 'notification';
+  source: 'reading' | 'saved' | 'random' | 'notification' | 'linked';
   onHome: () => void;
   onPositionChange: (bookId: string, chapter: number, verse: number) => void;
+  onReturn?: () => void;
 }
 
 export const ReaderScreen: React.FC<ReaderScreenProps> = ({
@@ -26,24 +81,27 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   source,
   onHome: _onHome,
   onPositionChange,
+  onReturn,
 }) => {
   const [currentBookId, setCurrentBookId] = useState(initialBookId);
   const [currentChapter, setCurrentChapter] = useState(initialChapter);
   const [currentVerseNum, setCurrentVerseNum] = useState(initialVerse);
+  const [currentSource, setCurrentSource] = useState(source);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [direction, setDirection] = useState(0);
   const [showChapterComplete, setShowChapterComplete] = useState(false);
-  const { translation, setTranslation } = useTheme();
+  const { translation } = useTheme();
 
   // Keep local state in sync with initial props when they change externally (e.g. hash routing)
   useEffect(() => {
     setCurrentBookId(initialBookId);
     setCurrentChapter(initialChapter);
     setCurrentVerseNum(initialVerse);
-  }, [initialBookId, initialChapter, initialVerse]);
+    setCurrentSource(source);
+  }, [initialBookId, initialChapter, initialVerse, source]);
 
   // Load chapter verses
   useEffect(() => {
@@ -71,10 +129,10 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
   // Check if current verse is saved + persist position only in reading mode
   useEffect(() => {
     isVerseSaved(currentBookId, currentChapter, currentVerseNum).then(setIsSaved);
-    if (source === 'reading') {
+    if (currentSource === 'reading') {
       onPositionChange(currentBookId, currentChapter, currentVerseNum);
     }
-  }, [currentBookId, currentChapter, currentVerseNum, onPositionChange, source]);
+  }, [currentBookId, currentChapter, currentVerseNum, onPositionChange, currentSource]);
 
   const currentVerse = verses.find(v => v.verse === currentVerseNum);
   const bookMeta = books.find(b => b.id === currentBookId);
@@ -206,15 +264,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
           {bookMeta?.name} · Capitolo {currentChapter}
         </div>
         
-        <button 
-          onClick={() => {
-            setDirection(0);
-            setTranslation(translation === 'cei' ? 'tilc' : 'cei');
-          }}
-          className="px-3 py-1 bg-black/5 dark:bg-white/5 rounded-full text-xs font-sans font-medium text-light-text/60 dark:text-dark-text/60 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-        >
-          {translation === 'cei' ? 'CEI 2008' : 'TILC'}
-        </button>
+        <div className="w-1/3" />
 
         <div className="text-xs font-sans text-light-text/30 dark:text-dark-text/30 w-1/3 text-right">
           {currentVerseNum}/{verses.length || '…'}
@@ -283,7 +333,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
                   className="font-serif text-center leading-relaxed max-w-2xl select-text"
                   style={{ fontSize: 'var(--verse-font-size)' }}
                 >
-                  {currentVerse.text}
+                  {formatVerseText(currentVerse.text, currentBookId)}
                 </p>
                 <div className="mt-8 text-sm font-sans tracking-widest uppercase opacity-50 text-accent font-medium">
                   {currentVerse.bookName} {currentVerse.chapter}:{currentVerse.displayVerse || currentVerse.verse}
@@ -317,6 +367,26 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
                 Capitolo {currentChapter} completato
               </h2>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Pulsante Indietro per versi collegati (stile detached navbar) */}
+      <AnimatePresence>
+        {source === 'linked' && onReturn && (
+          <motion.div
+            initial={{ opacity: 0, x: -20, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -20, scale: 0.9 }}
+            className="fixed bottom-[calc(2rem+env(safe-area-inset-bottom))] left-1/2 -ml-[13.5rem] z-50 flex justify-center items-center"
+          >
+            <button
+              onClick={onReturn}
+              className="p-3 bg-white/10 dark:bg-black/20 bg-gradient-to-b from-white/30 to-white/5 dark:from-white/10 dark:to-transparent backdrop-blur-2xl backdrop-saturate-[1.8] rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.6),inset_0_-1px_1px_rgba(255,255,255,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.15),inset_0_-1px_1px_rgba(255,255,255,0.02)] border border-white/40 dark:border-white/10 transition-colors active:scale-95 text-light-text dark:text-dark-text hover:text-accent [&>svg]:opacity-80 hover:[&>svg]:opacity-100"
+              aria-label="Torna indietro"
+            >
+              <Undo2 className="w-6 h-6 transition-opacity" />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
