@@ -8,6 +8,7 @@ export interface Verse {
   chapter: number;
   verse: number;
   text: string;
+  displayVerse?: string;
 }
 
 export interface SavedVerse extends Verse {

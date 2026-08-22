@@ -39,7 +39,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({ verse }) => {
         cacheBust: true,
       });
 
-      const slug = `${verse.bookId.toLowerCase()}-${verse.chapter}-${verse.verse}`;
+      const slug = `${verse.bookId.toLowerCase()}-${verse.chapter}-${verse.displayVerse || verse.verse}`;
       const fileName = `${slug}.png`;
 
       // Converti dataUrl in Blob e File
@@ -53,15 +53,15 @@ export const ShareButton: React.FC<ShareButtonProps> = ({ verse }) => {
         try {
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
-              title: `${verse.bookName} ${verse.chapter}:${verse.verse}`,
+              title: `${verse.bookName} ${verse.chapter}:${verse.displayVerse || verse.verse}`,
               files: [file]
             });
             shared = true;
           } else {
              // Fallback per browser che supportano share ma non file
              await navigator.share({
-               title: `${verse.bookName} ${verse.chapter}:${verse.verse}`,
-               text: `Leggi questo verso: ${verse.bookName} ${verse.chapter}:${verse.verse}\n\n${verse.text}`,
+               title: `${verse.bookName} ${verse.chapter}:${verse.displayVerse || verse.verse}`,
+               text: `Leggi questo verso: ${verse.bookName} ${verse.chapter}:${verse.displayVerse || verse.verse}\n\n${verse.text}`,
              });
              shared = true;
           }

@@ -195,6 +195,8 @@ def fetch_chapter(book_id, book_name, chapter, retries=3):
                     full_text = re.sub(r'\s+', ' ', full_text).strip()
 
                     if full_text:
+                        if full_text in ('.', '].', '...', '[...]') or (len(full_text) < 5 and not any(c.isalpha() for c in full_text)):
+                            full_text = "[Versetto raggruppato o omesso in questa traduzione]"
                         verses.append({
                             "verse": verse_num_map[verse_id],
                             "text": full_text
@@ -273,6 +275,10 @@ def main():
         print(f"\nDownload completed successfully! All {len(all_tasks)} chapters saved.")
 
     print(f"CEI Bible saved to {output_path}.")
+    
+    # Esegui lo script di raggruppamento per allineare i versetti
+    import subprocess
+    subprocess.run(["python", "scripts/group_verses.py"])
 
 
 if __name__ == "__main__":

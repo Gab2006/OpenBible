@@ -127,7 +127,7 @@ def fetch_chapter(book_id, abbrev, chapter, cei_verses, retries=3):
                 if verse_text:
                     parsed_tilc[start_v] = verse_text
                     for v in range(start_v + 1, end_v + 1):
-                        parsed_tilc[v] = "-"
+                        parsed_tilc[v] = "[Versetto raggruppato o omesso in questa traduzione]"
                         
             if not parsed_tilc:
                 print(f"Warning: No verses parsed for {book_id} {chapter}")
@@ -136,7 +136,7 @@ def fetch_chapter(book_id, abbrev, chapter, cei_verses, retries=3):
             final_verses = []
             for cei_v in cei_verses:
                 v_num = cei_v["verse"]
-                text = parsed_tilc.get(v_num, "-")
+                text = parsed_tilc.get(v_num, "[Versetto raggruppato o omesso in questa traduzione]")
                 final_verses.append({
                     "verse": v_num,
                     "text": text
@@ -232,6 +232,11 @@ def main():
         print(f"\nDownload completed successfully! All {len(all_tasks)} chapters saved.")
 
     print(f"TILC Bible saved to {output_path}.")
+    
+    # Esegui lo script di raggruppamento per allineare i versetti
+    import subprocess
+    subprocess.run(["python", "scripts/group_verses.py"])
+
 
 if __name__ == "__main__":
     main()

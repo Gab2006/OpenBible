@@ -72,3 +72,17 @@ coverage/
 ehthumbs.db
 Thumbs.db
 desktop.ini
+
+# Python build artifacts and cache
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Data generation intermediates
+public/bible.json
+
+# Vite PWA build outputs
+dev-dist/

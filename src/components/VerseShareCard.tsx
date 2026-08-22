@@ -54,7 +54,7 @@ export const VerseShareCard = forwardRef<HTMLDivElement, VerseShareCardProps>(({
           className="mt-16 text-[22px] font-sans font-semibold uppercase tracking-[0.25em]"
           style={{ color: accentHex }}
         >
-          {verse.bookName} {verse.chapter}:{verse.verse}
+          {verse.bookName} {verse.chapter}:{verse.displayVerse || verse.verse}
         </div>
       </div>
     </div>

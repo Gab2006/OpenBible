@@ -3,7 +3,7 @@ import { getBookById } from '../data/books';
 
 import type { Translation } from '../types';
 
-type BibleData = Record<string, Record<string, Array<{ verse: number; text: string }>>>;
+type BibleData = Record<string, Record<string, Array<{ verse: number; text: string; displayVerse?: string }>>>;
 
 let cachedBibleData: Record<Translation, BibleData | null> = { cei: null, tilc: null };
 let fetchPromise: Record<Translation, Promise<BibleData | null> | null> = { cei: null, tilc: null };
@@ -58,6 +58,7 @@ export async function fetchChapter(bookId: string, chapter: number, translation:
     chapter,
     verse: item.verse,
     text: item.text,
+    displayVerse: item.displayVerse,
   }));
 
   return { verses, error: null };

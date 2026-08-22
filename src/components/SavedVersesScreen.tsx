@@ -93,7 +93,7 @@ const SavedVerseCard: React.FC<{
           </p>
           <div className="flex items-center justify-between">
             <span className="text-xs font-sans tracking-widest uppercase text-accent/70 font-medium">
-              {verse.bookName} {verse.chapter}:{verse.verse}
+              {verse.bookName} {verse.chapter}:{verse.displayVerse || verse.verse}
             </span>
             <button
               onClick={(e) => { e.stopPropagation(); onRemove(); }}

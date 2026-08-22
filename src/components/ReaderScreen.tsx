@@ -96,10 +96,12 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
     if (!bookMeta) return;
 
     if (dir === 1) { // Next
-      const isLastVerse = currentVerseNum === verses.length;
+      const nextVerseIndex = verses.findIndex(v => v.verse > currentVerseNum && v.text.trim() !== "");
+      const isLastVerse = nextVerseIndex === -1;
+
       if (!isLastVerse && verses.length > 0) {
         setDirection(1);
-        setCurrentVerseNum(currentVerseNum + 1);
+        setCurrentVerseNum(verses[nextVerseIndex].verse);
       } else if (isLastVerse) {
         // Capitolo completato: segna il progresso
         markChapterCompleted(currentBookId, currentChapter);
@@ -124,14 +126,16 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
         }, 1500);
       }
     } else { // Prev
-      if (currentVerseNum > 1) {
+      const prevVersesCurrentChapter = verses.filter(v => v.verse < currentVerseNum && v.text.trim() !== "");
+      if (prevVersesCurrentChapter.length > 0) {
         setDirection(-1);
-        setCurrentVerseNum(currentVerseNum - 1);
+        setCurrentVerseNum(prevVersesCurrentChapter[prevVersesCurrentChapter.length - 1].verse);
       } else {
         if (currentChapter > 1) {
           const prevChapter = currentChapter - 1;
-          fetchChapter(currentBookId, prevChapter).then(({ verses: prevVerses }) => {
-             const lastVerse = prevVerses.length > 0 ? prevVerses[prevVerses.length - 1].verse : 1;
+          fetchChapter(currentBookId, prevChapter, translation).then(({ verses: prevVerses }) => {
+             const validVerses = prevVerses.filter(v => v.text.trim() !== "");
+             const lastVerse = validVerses.length > 0 ? validVerses[validVerses.length - 1].verse : 1;
              setDirection(-1);
              setCurrentChapter(prevChapter);
              setCurrentVerseNum(lastVerse);
@@ -140,8 +144,9 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
           const bookIndex = books.findIndex(b => b.id === currentBookId);
           if (bookIndex > 0) {
             const prevBook = books[bookIndex - 1];
-            fetchChapter(prevBook.id, prevBook.chapters).then(({ verses: prevVerses }) => {
-              const lastVerse = prevVerses.length > 0 ? prevVerses[prevVerses.length - 1].verse : 1;
+            fetchChapter(prevBook.id, prevBook.chapters, translation).then(({ verses: prevVerses }) => {
+              const validVerses = prevVerses.filter(v => v.text.trim() !== "");
+              const lastVerse = validVerses.length > 0 ? validVerses[validVerses.length - 1].verse : 1;
               setDirection(-1);
               setCurrentBookId(prevBook.id);
               setCurrentChapter(prevBook.chapters);
@@ -281,7 +286,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({
                   {currentVerse.text}
                 </p>
                 <div className="mt-8 text-sm font-sans tracking-widest uppercase opacity-50 text-accent font-medium">
-                  {currentVerse.bookName} {currentVerse.chapter}:{currentVerse.verse}
+                  {currentVerse.bookName} {currentVerse.chapter}:{currentVerse.displayVerse || currentVerse.verse}
                 </div>
               </>
             ) : (
