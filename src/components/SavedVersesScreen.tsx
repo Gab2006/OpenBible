@@ -117,6 +117,8 @@ export const SavedVersesScreen: React.FC<SavedVersesScreenProps> = ({ onBack, on
 
   useEffect(() => {
     loadVerses();
+    window.addEventListener('verses-changed', loadVerses);
+    return () => window.removeEventListener('verses-changed', loadVerses);
   }, []);
 
   const loadVerses = async () => {

@@ -98,15 +98,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     ? Math.min(100, Math.round((readingPosition.verse / chapterVerseCount) * 100))
     : 0;
 
-  const isBookCompleted = (bookId: string): boolean => {
-    const book = books.find(b => b.id === bookId);
-    if (!book) return false;
-    for (let ch = 1; ch <= book.chapters; ch++) {
-      if (!completedChapters.has(`${bookId}-${ch}`)) return false;
-    }
-    return true;
-  };
-
   useEffect(() => {
     isVerseSaved(dailyVerse.bookId, dailyVerse.chapter, dailyVerse.verse).then(setIsDailyVerseSaved);
   }, [dailyVerse]);
@@ -152,49 +143,110 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     return () => document.removeEventListener('touchmove', handleTouchMove, { capture: true } as any);
   }, [isReordering]);
 
-  const renderBookList = (list: typeof books) => (
-    <motion.div
-      className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-4"
-      initial="hidden"
-      animate="visible"
-      variants={{
-        hidden: {},
-        visible: { transition: { staggerChildren: 0.03 } },
-      }}
-    >
-      {list.map(book => {
-        const bookDone = isBookCompleted(book.id);
-        return (
-          <React.Fragment key={book.id}>
-            <motion.button
-              variants={{
-                hidden: { opacity: 0, y: 8 },
-                visible: { opacity: 1, y: 0 },
-              }}
-              onClick={() => setSelectedBook(book.id === selectedBook ? null : book.id)}
-              className={`p-3 text-left rounded-xl transition-all duration-200 border flex items-center justify-between
-                ${selectedBook === book.id
-                  ? 'bg-accent/10 border-accent/40 text-accent font-medium shadow-sm'
-                  : bookDone
-                    ? 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/15'
-                    : 'border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 hover:border-accent/20'}`}
-            >
-              <span className="truncate flex items-center gap-1.5">
-                {bookDone && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                {book.name}
-              </span>
-              {selectedBook === book.id && (
-                <ChevronRight className="w-4 h-4 shrink-0 text-accent" />
-              )}
-            </motion.button>
-            <AnimatePresence>
-              {selectedBook === book.id && renderChapterGrid(book.id)}
-            </AnimatePresence>
-          </React.Fragment>
-        );
-      })}
-    </motion.div>
-  );
+  const OT_SECTIONS = [
+    { title: 'Pentateuco', start: 0, end: 5 },
+    { title: 'Libri Storici', start: 5, end: 17 },
+    { title: 'Libri Sapienziali', start: 17, end: 22 },
+    { title: 'Profeti Maggiori', start: 22, end: 27 },
+    { title: 'Profeti Minori', start: 27, end: 39 },
+  ];
+
+  const NT_SECTIONS = [
+    { title: 'Vangeli & Atti', start: 0, end: 5 },
+    { title: 'Lettere di Paolo', start: 5, end: 18 },
+    { title: 'Lettere Cattoliche', start: 18, end: 26 },
+    { title: 'Apocalisse', start: 26, end: 27 },
+  ];
+
+  const renderBookList = (list: typeof books) => {
+    if (list.length === 0) return null;
+    const testament = list[0].testament;
+    const sections = testament === 'OT' ? OT_SECTIONS : NT_SECTIONS;
+
+    return (
+      <div className="space-y-6 pb-4">
+        {sections.map(section => {
+          const sectionBooks = list.slice(section.start, section.end);
+          if (sectionBooks.length === 0) return null;
+          
+          return (
+            <div key={section.title} className="space-y-3">
+              <h3 className="text-xs font-sans tracking-widest uppercase text-accent/70 font-medium px-1">
+                {section.title}
+              </h3>
+              <motion.div
+                className="grid grid-cols-2 md:grid-cols-3 gap-2"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: {},
+                  visible: { transition: { staggerChildren: 0.03 } },
+                }}
+              >
+                {sectionBooks.map(book => {
+                  let readChapters = 0;
+                  for (let ch = 1; ch <= book.chapters; ch++) {
+                    if (completedChapters.has(`${book.id}-${ch}`)) readChapters++;
+                  }
+                  const bookDone = readChapters === book.chapters;
+                  const isStarted = readChapters > 0;
+                  const progressPercentage = Math.round((readChapters / book.chapters) * 100);
+
+                  return (
+                    <React.Fragment key={book.id}>
+                      <motion.button
+                        variants={{
+                          hidden: { opacity: 0, y: 8 },
+                          visible: { opacity: 1, y: 0 },
+                        }}
+                        onClick={() => setSelectedBook(book.id === selectedBook ? null : book.id)}
+                        className={`relative p-3 ${isStarted ? 'pb-7' : ''} text-left rounded-xl transition-all duration-200 border flex flex-col justify-center
+                          ${selectedBook === book.id
+                            ? 'bg-accent/10 border-accent/40 text-accent shadow-sm'
+                            : bookDone
+                              ? 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/15'
+                              : 'border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 hover:border-accent/20'}`}
+                      >
+                        <div className="w-full flex items-center justify-between">
+                          <span className={`truncate flex items-center gap-1.5 ${selectedBook === book.id ? 'font-medium' : ''}`}>
+                            {book.name}
+                          </span>
+                          {selectedBook === book.id && (
+                            <ChevronRight className="w-4 h-4 shrink-0 text-accent" />
+                          )}
+                        </div>
+                        {isStarted && (
+                          <div className={`absolute bottom-1.5 right-1.5 text-[9px] font-sans font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1
+                            ${bookDone 
+                              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
+                              : 'bg-accent/20 text-accent'}`}
+                          >
+                            {bookDone ? (
+                              <Check className="w-3 h-3" />
+                            ) : (
+                              <span>{progressPercentage}%</span>
+                            )}
+                          </div>
+                        )}
+                        {isStarted && !bookDone && (
+                          <div className="absolute bottom-1.5 left-3 text-[9px] font-sans uppercase tracking-wider opacity-50">
+                            {readChapters}/{book.chapters} cap
+                          </div>
+                        )}
+                      </motion.button>
+                      <AnimatePresence>
+                        {selectedBook === book.id && renderChapterGrid(book.id)}
+                      </AnimatePresence>
+                    </React.Fragment>
+                  );
+                })}
+              </motion.div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const renderChapterGrid = (bookId: string) => {
     const book = books.find(b => b.id === bookId);
@@ -416,44 +468,136 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             renderCard={renderStatCard}
           />
         );
-      case 'testament-ot':
+      case 'testament-ot': {
+        const otStats = (() => {
+          let total = 0;
+          let read = 0;
+          otBooks.forEach(b => {
+            total += b.chapters;
+            for (let ch = 1; ch <= b.chapters; ch++) {
+              if (completedChapters.has(`${b.id}-${ch}`)) read++;
+            }
+          });
+          return { total, read, percentage: total > 0 ? Math.round((read / total) * 100) : 0 };
+        })();
         return (
           <motion.button
             animate={{ scale: isReordering ? 1.02 : 1 }}
             whileHover={!isReordering ? { scale: 1.02 } : undefined}
             whileTap={!isReordering ? { scale: 0.98 } : undefined}
             onClick={isReordering ? undefined : () => handleTestamentClick('OT')}
-            className="w-full p-5 rounded-2xl text-left border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.06] dark:from-white/[0.02] dark:to-white/[0.06] hover:border-accent/30 hover:shadow-sm transition-all duration-300 group"
+            className="w-full p-5 rounded-2xl text-left border-l-4 border-l-accent border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.06] dark:from-white/[0.02] dark:to-white/[0.06] hover:border-accent/30 hover:shadow-sm transition-all duration-300 group relative overflow-hidden"
           >
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">📜</span>
-              <div className="flex-1 min-w-0">
-                <h2 className="font-serif text-xl font-medium text-accent mb-0.5">Antico Testamento</h2>
-                <p className="text-sm opacity-50">39 libri · Da Genesi a Malachia</p>
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 relative flex items-center justify-center shrink-0">
+                <svg className="w-full h-full -rotate-90 transform text-accent/20" viewBox="0 0 36 36">
+                  <path
+                    strokeWidth="3"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <motion.path
+                    className="text-accent"
+                    strokeWidth="3"
+                    strokeDasharray={`${otStats.percentage}, 100`}
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    initial={{ strokeDasharray: '0, 100' }}
+                    animate={{ strokeDasharray: `${otStats.percentage}, 100` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-[10px] font-bold font-sans text-accent">{otStats.percentage}%</span>
+                </div>
               </div>
-              <ChevronRight className="w-5 h-5 opacity-30 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all mt-1 shrink-0" />
+              <div className="flex-1 min-w-0 pt-1">
+                <h2 className="font-serif text-xl font-medium text-accent mb-0.5">Antico Testamento</h2>
+                <p className="text-sm opacity-60">39 libri · Da Genesi a Malachia</p>
+                <p className="text-xs opacity-40 mt-0.5">{otStats.read} di {otStats.total} capitoli letti</p>
+              </div>
+              <ChevronRight className="w-5 h-5 opacity-30 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all mt-3 shrink-0" />
+            </div>
+            {/* Pill Progress Bar Sottile */}
+            <div className="h-1.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+              <motion.div 
+                className="h-full bg-accent rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${otStats.percentage}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
             </div>
           </motion.button>
         );
-      case 'testament-nt':
+      }
+      case 'testament-nt': {
+        const ntStats = (() => {
+          let total = 0;
+          let read = 0;
+          ntBooks.forEach(b => {
+            total += b.chapters;
+            for (let ch = 1; ch <= b.chapters; ch++) {
+              if (completedChapters.has(`${b.id}-${ch}`)) read++;
+            }
+          });
+          return { total, read, percentage: total > 0 ? Math.round((read / total) * 100) : 0 };
+        })();
         return (
           <motion.button
             animate={{ scale: isReordering ? 1.02 : 1 }}
             whileHover={!isReordering ? { scale: 1.02 } : undefined}
             whileTap={!isReordering ? { scale: 0.98 } : undefined}
             onClick={isReordering ? undefined : () => handleTestamentClick('NT')}
-            className="w-full p-5 rounded-2xl text-left border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.06] dark:from-white/[0.02] dark:to-white/[0.06] hover:border-accent/30 hover:shadow-sm transition-all duration-300 group"
+            className="w-full p-5 rounded-2xl text-left border-l-4 border-l-accent border border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.02] to-black/[0.06] dark:from-white/[0.02] dark:to-white/[0.06] hover:border-accent/30 hover:shadow-sm transition-all duration-300 group relative overflow-hidden"
           >
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">✝️</span>
-              <div className="flex-1 min-w-0">
-                <h2 className="font-serif text-xl font-medium text-accent mb-0.5">Nuovo Testamento</h2>
-                <p className="text-sm opacity-50">27 libri · Da Matteo ad Apocalisse</p>
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 relative flex items-center justify-center shrink-0">
+                <svg className="w-full h-full -rotate-90 transform text-accent/20" viewBox="0 0 36 36">
+                  <path
+                    strokeWidth="3"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <motion.path
+                    className="text-accent"
+                    strokeWidth="3"
+                    strokeDasharray={`${ntStats.percentage}, 100`}
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    initial={{ strokeDasharray: '0, 100' }}
+                    animate={{ strokeDasharray: `${ntStats.percentage}, 100` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-[10px] font-bold font-sans text-accent">{ntStats.percentage}%</span>
+                </div>
               </div>
-              <ChevronRight className="w-5 h-5 opacity-30 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all mt-1 shrink-0" />
+              <div className="flex-1 min-w-0 pt-1">
+                <h2 className="font-serif text-xl font-medium text-accent mb-0.5">Nuovo Testamento</h2>
+                <p className="text-sm opacity-60">27 libri · Da Matteo ad Apocalisse</p>
+                <p className="text-xs opacity-40 mt-0.5">{ntStats.read} di {ntStats.total} capitoli letti</p>
+              </div>
+              <ChevronRight className="w-5 h-5 opacity-30 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all mt-3 shrink-0" />
+            </div>
+            {/* Pill Progress Bar Sottile */}
+            <div className="h-1.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+              <motion.div 
+                className="h-full bg-accent rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${ntStats.percentage}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
             </div>
           </motion.button>
         );
+      }
     }
   };
 

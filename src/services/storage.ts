@@ -131,6 +131,38 @@ async function migrateSavedVersesToCEI() {
   }
 }
 
+/**
+ * Aggiorna il testo di tutti i versetti salvati quando l'utente cambia traduzione.
+ * Esegue in background per non causare lag nell'interfaccia.
+ */
+export async function updateSavedVersesTranslation(translation: string) {
+  try {
+    const { fetchSingleVerse } = await import('./bibleApi');
+    const db = await initDB();
+    const allVerses = await db.getAll('saved_verses');
+
+    if (allVerses.length === 0) return;
+
+    let updatedCount = 0;
+    for (const verse of allVerses) {
+      // @ts-ignore - translation string casted correctly in usage
+      const newText = await fetchSingleVerse(verse.bookId, verse.chapter, verse.verse, translation);
+      if (newText && newText !== verse.text) {
+        await db.put('saved_verses', { ...verse, text: newText });
+        updatedCount++;
+      }
+      // Evitiamo di bloccare il main thread per consentire le animazioni fluide
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+
+    if (updatedCount > 0) {
+      window.dispatchEvent(new Event('verses-changed'));
+    }
+  } catch (error) {
+    console.error('Errore durante l\'aggiornamento della traduzione dei versetti salvati:', error);
+  }
+}
+
 export async function saveReadingPosition(position: ReadingPosition) {
   const db = await initDB();
   await db.put('reading_progress', position, 'current');

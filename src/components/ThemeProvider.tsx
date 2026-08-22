@@ -55,6 +55,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTranslation = (t: Translation) => {
     setTranslationState(t);
     localStorage.setItem('translation', t);
+    
+    // Aggiorna i versetti salvati in background
+    import('../services/storage').then(({ updateSavedVersesTranslation }) => {
+      updateSavedVersesTranslation(t);
+    }).catch(err => console.error('Impossibile aggiornare i versetti salvati:', err));
   };
 
   // Applica le CSS custom properties per i colori e grandezza font
